@@ -18,6 +18,7 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
   profile      Profile?
+  messages     Message[]
 }
 
 model Profile {
@@ -26,4 +27,12 @@ model Profile {
   avatarUrl String?
   userId    Int     @unique
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id        Int       @id @default(autoincrement())
+  text      String 
+  userId    Int   
+  sendAt    DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
