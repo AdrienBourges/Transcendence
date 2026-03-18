@@ -10,7 +10,8 @@ At the current stage, the following already works:
 - backend test route works
 - frontend can call the backend successfully
 - PostgreSQL runs in Docker
-- backend can connect to PostgreSQL
+- Prisma is configured in the backend
+- Backend can connect to PostgreSQL through Prisma
 - backend `.env.example` is available
 
 ---
@@ -20,6 +21,7 @@ At the current stage, the following already works:
 - **Frontend:** React + Vite + TypeScript
 - **Backend:** Express + TypeScript
 - **Database:** PostgreSQL
+- **ORM:** Prisma
 - **Realtime:** Socket.IO *(planned later)*
 - **Reverse proxy / HTTPS:** nginx *(planned later)*
 - **Containerization:** Docker
@@ -72,17 +74,37 @@ docker-compose ps
 You should see the `postgres` service running.
 
 ---
-
-## Run the backend
+### 4. Install backend dependencies
 
 Open a terminal and run:
 
 ```bash
 cd backend
 npm install
-npm run dev
 ```
 
+### 5. Apply Prisma migrations
+Still inside backend/, run
+
+```bash
+npx prisma migrate dev
+```
+
+This will:
+
+connect Prisma to PostgreSQL
+
+- apply the existing database migrations
+
+- generate the Prisma client
+
+### 6. Run the backend
+
+Still inside backend/, run:
+
+```bash
+npm run dev
+```
 The backend should start on:
 
 `http://localhost:3000`
@@ -111,7 +133,7 @@ Expected result:
 
 ---
 
-## Test the database connection
+## Test the database connection through prisma
 
 With the backend still running, open:
 
@@ -125,21 +147,13 @@ curl http://localhost:3000/api/db-health
 
 Expected result:
 
-A JSON response confirming that the database connection works.
+A JSON response confirming that the backend can talk to Postgresql through Prisma.
 
-The response should include:
-
-- a success message
-- the database name
-- the current timestamp
-
-Example:
+The response should include be a success message
 
 ```json
 {
-  "message": "Database connection OK",
-  "database": "transcendence",
-  "now": "2026-03-16T..."
+  "message": "Database connection OK"
 }
 ```
 
@@ -191,6 +205,7 @@ If everything is working correctly, you should have:
 - PostgreSQL running in Docker
 - backend running on `localhost:3000`
 - frontend running on `localhost:5173`
+- Prisma migrations applied successfully
 - `/api/health` returning success
 - `/api/db-health` returning success
 - frontend displaying the backend message
@@ -201,6 +216,7 @@ If everything is working correctly, you should have:
 
 - frontend and backend currently run locally
 - PostgreSQL currently runs in Docker
+- Prisma is used as the backend ORM
 - nginx / HTTPS setup will be added later in the project
 - full Dockerization of the whole app will be added later in the project
 
