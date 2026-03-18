@@ -83,7 +83,7 @@ cd backend
 npm install
 ```
 
-### 5. Apply Prisma migrations
+### 5. Apply Prisma migrations && Create Prisma client
 Still inside backend/, run
 
 ```bash
@@ -92,11 +92,25 @@ npx prisma migrate dev
 
 This will:
 
-connect Prisma to PostgreSQL
+- connect Prisma to PostgreSQL
 
 - apply the existing database migrations
 
 - generate the Prisma client
+
+Then run
+
+```bash
+npx prisma generate
+```
+
+This will: 
+
+- read the schema.prisma file
+
+- generate a type-safe Prisma client
+
+- make it available for import in the backend code
 
 ### 6. Run the backend
 
