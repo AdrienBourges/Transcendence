@@ -4,8 +4,7 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -15,6 +14,7 @@ datasource db {
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
+  username     String  @unique
   passwordHash String
   createdAt    DateTime @default(now())
   profile      Profile?
@@ -22,7 +22,6 @@ model User {
 
 model Profile {
   id        Int     @id @default(autoincrement())
-  username  String  @unique
   avatarUrl String?
   userId    Int     @unique
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
