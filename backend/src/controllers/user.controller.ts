@@ -25,3 +25,15 @@ export async function getUserById(req: Request, res: Response) {
 
 	return res.json(user);
 }
+
+export async function updateMe(req: Request, res: Response) {
+	if (!req.user) {
+		return res.status(401).json({
+			message: "Unauthorized",
+		});
+	}
+
+	const user = await userService.updateMe(req.user.id, req.body);
+
+	return res.json(user);
+}

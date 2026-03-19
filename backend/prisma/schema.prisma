@@ -22,7 +22,12 @@ model User {
 
 model Profile {
   id        Int     @id @default(autoincrement())
-  avatarUrl String?
   userId    Int     @unique
+
+  avatarUrl String?
+  languages String?
+  discord   String?
+  pronouns  String?
+
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
