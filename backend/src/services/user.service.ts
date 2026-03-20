@@ -54,7 +54,7 @@ export async function updateMe(
 	}
 ) {
 	await prisma.profile.update({
-		where: { userId },
+		where: { userId: userId },
 		data: {
 			avatarUrl: data.avatarUrl,
 			languages: data.languages,
