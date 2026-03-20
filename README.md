@@ -1,33 +1,38 @@
 # Transcendence
 
+## Current Status
 
-## Project status
+### Frontend
 
-At the current stage, the following already works:
+- Register page working: `http://localhost:5173/register`
+- Login page working: `http://localhost:5173/login`
+- Logout flow working
 
-- React frontend launches
-- Express backend launches
-- backend test route works
-- frontend can call the backend successfully
-- PostgreSQL runs in Docker
-- Prisma is configured in the backend
-- Backend can connect to PostgreSQL through Prisma
-- backend `.env.example` is available
+### Backend
+
+- Email/password registration
+- Email/password login
+- 42 OAuth login
+- JWT authentication
+- Get current authenticated user
+- Get public user profile by ID
+- Update current user profile
+- Avatar image upload to filesystem
 
 ---
 
-## Tech stack
+## Tech Stack
 
 - **Frontend:** React + Vite + TypeScript
 - **Backend:** Express + TypeScript
 - **Database:** PostgreSQL
-- **ORM:** Prisma
-- **Realtime:** Socket.IO *(planned later)*
-- **Reverse proxy / HTTPS:** nginx *(planned later)*
-- **Containerization:** Docker
+- **Authentication:** JWT + 42 OAuth
+- **File Storage:** Backend filesystem
+- **Realtime / Chat:** planned
+- **HTTPS / Reverse Proxy:** planned
+- **Full Dockerization:** planned
 
 ---
-
 
 ## Prerequisites
 
@@ -40,7 +45,7 @@ Make sure you have installed:
 
 ---
 
-## Getting started
+## Getting Started
 
 ### 1. Clone the repository
 
@@ -51,131 +56,33 @@ cd Transcendence
 
 ### 2. Create the backend environment file
 
-Copy the example environment file:
-
 ```bash
 cp backend/.env.example backend/.env
 ```
 
 ### 3. Start PostgreSQL
 
-From the project root, run:
-
 ```bash
 docker-compose up -d postgres
 ```
 
-To check that the container is running:
+Check that it is running:
 
 ```bash
 docker-compose ps
 ```
 
-You should see the `postgres` service running.
-
----
-### 4. Install backend dependencies
-
-Open a terminal and run:
+### 4. Start the backend
 
 ```bash
 cd backend
 npm install
-```
-
-### 5. Apply Prisma migrations && Create Prisma client
-Still inside backend/, run
-
-```bash
-npx prisma migrate dev
-```
-
-This will:
-
-- connect Prisma to PostgreSQL
-
-- apply the existing database migrations
-
-- generate the Prisma client
-
-Then run
-
-```bash
-npx prisma generate
-```
-
-This will: 
-
-- read the schema.prisma file
-
-- generate a type-safe Prisma client
-
-- make it available for import in the backend code
-
-### 6. Run the backend
-
-Still inside backend/, run:
-
-```bash
 npm run dev
 ```
-The backend should start on:
 
-`http://localhost:3000`
+Backend runs on: `http://localhost:3000`
 
----
-
-## Test the backend
-
-### Health route
-
-Open this URL in your browser:
-
-`http://localhost:3000/api/health`
-
-Or test it in the terminal:
-
-```bash
-curl http://localhost:3000/api/health
-```
-
-Expected result:
-
-```json
-{"message":"Backend is running"}
-```
-
----
-
-## Test the database connection through prisma
-
-With the backend still running, open:
-
-`http://localhost:3000/api/db-health`
-
-Or test it in the terminal:
-
-```bash
-curl http://localhost:3000/api/db-health
-```
-
-Expected result:
-
-A JSON response confirming that the backend can talk to Postgresql through Prisma.
-
-The response should include be a success message
-
-```json
-{
-  "message": "Database connection OK"
-}
-```
-
----
-
-## Run the frontend
-
-Open a second terminal and run:
+### 5. Start the frontend
 
 ```bash
 cd frontend
@@ -183,54 +90,159 @@ npm install
 npm run dev
 ```
 
-The frontend should start on:
-
-`http://localhost:5173`
+Frontend runs on: `http://localhost:5173`
 
 ---
 
-## Test the frontend → backend connection
+## Frontend Routes
 
-Open the frontend in your browser:
+Currently available:
 
-`http://localhost:5173`
-
-Expected result:
-
-- the page loads correctly
-- you should see a message from the backend displayed on the page
-
-For example:
-
-`Backend message: Backend is running`
-
-This confirms that:
-
-- the frontend is running
-- the backend is running
-- the frontend can call the backend successfully
+- **Register:** `http://localhost:5173/register`
+- **Login:** `http://localhost:5173/login`
 
 ---
 
-## Current working setup
+## 42 OAuth Login
 
-If everything is working correctly, you should have:
+To test 42 OAuth, open this URL in your browser:
 
-- PostgreSQL running in Docker
-- backend running on `localhost:3000`
-- frontend running on `localhost:5173`
-- Prisma migrations applied successfully
-- `/api/health` returning success
-- `/api/db-health` returning success
-- frontend displaying the backend message
+```text
+https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-9ac612b679f1a8dccfab14517f2f446d97dd25e3b80380cb97ddbbe64b321423&redirect_uri=http://localhost:3000/api/auth/callback&response_type=code
+```
+
+It will redirect to the backend callback:
+
+`http://localhost:3000/api/auth/callback`
+
+---
+
+## API Endpoints
+
+### Authentication
+
+#### `POST /api/auth/register`
+Create a new user with:
+- `email`
+- `username`
+- `password`
+
+#### `POST /api/auth/login`
+Authenticate a user with email/password.
+
+Returns:
+- a **JWT**
+- user data
+
+### Users
+
+#### `GET /api/users/me` *(JWT required)*
+Get the current authenticated user.
+
+#### `GET /api/users/:id`
+Get a public user profile by ID.
+
+#### `PATCH /api/users/me` *(JWT required)*
+Update the current user's profile.
+
+Example fields:
+- `avatarUrl`
+- `languages`
+- `discord`
+- `pronouns`
+
+### Upload
+
+#### `POST /api/upload/avatar` *(JWT required)*
+Upload an avatar image.
+
+The file is saved in the backend filesystem.
+
+### Health
+
+#### `GET /api/health`
+Check if the server is running.
+
+#### `GET /api/db-health`
+Check database connection.
+
+---
+
+## API Test Commands
+### Register
+
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","username":"gwendal","password":"password123"}'
+```
+
+### Login
+
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"password123"}'
+```
+
+### Get current authenticated user
+
+Replace `TOKEN` with the JWT returned by login.
+
+```bash
+curl http://localhost:3000/api/users/me \
+  -H "Authorization: Bearer TOKEN"
+```
+
+### Get public user profile by ID
+
+```bash
+curl http://localhost:3000/api/users/1
+```
+
+### Update current user's profile
+
+Replace `TOKEN` with the JWT returned by login.
+
+```bash
+curl -X PATCH http://localhost:3000/api/users/me \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer TOKEN" \
+  -d '{"avatarUrl":"https://example.com/avatar.png","languages":"fr,en","discord":"gholloco","pronouns":"he/him"}'
+```
+
+### Health check
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+### Database health check
+
+```bash
+curl http://localhost:3000/api/db/health
+```
+
+### Upload avatar
+
+Replace `TOKEN` with the JWT returned by login, and replace the file path with a real image path on your machine.
+
+```bash
+curl -X POST http://localhost:3000/api/upload/avatar/ \
+  -H "Authorization: Bearer TOKEN" \
+  -F "avatar=@/home/gwendal/avatar.png"
+```
 
 ---
 
 ## Notes
 
-- frontend and backend currently run locally
-- PostgreSQL currently runs in Docker
-- Prisma is used as the backend ORM
-- nginx / HTTPS setup will be added later in the project
-- full Dockerization of the whole app will be added later in the project
+- Frontend and backend currently run locally
+- HTTPS is not set up yet
+- PostgreSQL runs in Docker while the apps run on the host
+- Full Dockerization and nginx reverse proxy are planned
+- Groups, friends, search, and real-time chat are the next priorities
+
+---
+
 
