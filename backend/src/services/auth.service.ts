@@ -16,7 +16,7 @@ type LoginInput = {
 };
 
 export async function register(data: RegisterInput) {
-	const existingUser = await prisma.user.findUnique({
+	const existingUser = await prisma.user.findFirst({
 		where: { email: data.email },
 	});
 
@@ -54,7 +54,7 @@ export async function register(data: RegisterInput) {
 }
 
 export async function login(data: LoginInput) {
-	const user = await prisma.user.findUnique({
+	const user = await prisma.user.findFirst({
 		where: { email: data.email },
 	});
 
