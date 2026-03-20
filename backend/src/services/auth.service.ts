@@ -39,6 +39,9 @@ export async function register(data: RegisterInput) {
 			email: data.email,
 			username: data.username,
 			passwordHash: hashedPassword,
+			profile: {
+				create: {},
+			},
 		},
 		select: {
 			id: true,
