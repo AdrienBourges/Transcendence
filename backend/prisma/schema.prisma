@@ -28,3 +28,11 @@ model Profile {
   userId    Int     @unique
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model Message {
+  id        Int       @id @default(autoincrement())
+  text      String 
+  userId    Int   
+  sendAt    DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
