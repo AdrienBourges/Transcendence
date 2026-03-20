@@ -133,6 +133,10 @@ export async function oauth42Callback(code: string) {
 				email: oauth42User.email,
 				username: username,
 				oauth42Id: String(oauth42User.id),
+				authProvider: "42",
+				profile: {
+					create: {},
+				},
 			},
 		});
 	}

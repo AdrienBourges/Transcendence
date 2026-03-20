@@ -18,6 +18,13 @@ export async function oauth42Callback(req: Request, res: Response) {
 		return;
 	}
 
-	const result = await authService.oauth42Callback(code);
-	res.json(result);
+	try {
+		const result = await authService.oauth42Callback(code);
+		res.json(result);
+	} catch (error: unknown) {
+		console.error("OAuth42 callback error:", error);
+		const message =
+			error instanceof Error ? error.message : "OAuth42 authentication failed";
+		res.status(500).json({ error: message });
+	}
 }
