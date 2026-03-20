@@ -13,11 +13,13 @@ datasource db {
 
 model User {
   id           Int      @id @default(autoincrement())
-  email        String   @unique
+  email        String?
   username     String  @unique
-  passwordHash String
+  passwordHash String?
   createdAt    DateTime @default(now())
   profile      Profile?
+  oauth42Id    String? @unique
+  authProvider String   @default("local") 
 }
 
 model Profile {

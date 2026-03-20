@@ -10,3 +10,14 @@ export async function login(req: Request, res: Response) {
 	const result = await authService.login(req.body);
 	res.json(result);
 }
+export async function oauth42Callback(req: Request, res: Response) {
+	const { code } = req.query;
+
+	if (!code || typeof code !== "string") {
+		res.status(400).json({ error: "Missing authorization code" });
+		return;
+	}
+
+	const result = await authService.oauth42Callback(code);
+	res.json(result);
+}
