@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment configuration files (very important! prevents password leakage)
+.env
+.env.local
+.env.*.local
+
+# Docker/Podman related files
+.containers
+docker-compose.override.yml
+
+# Prisma generated client (should be generated locally on each machine)
+/backend/node_modules/.prisma
+/backend/prisma/migrations
+
+# Operating system temporary files
+.DS_Store
+Thumbs.db

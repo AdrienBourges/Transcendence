@@ -1,37 +1,55 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute';
+
+// --- Import page components ---
+import HomePage from '@/pages/HomePage';
+import LoginPage from '@/pages/LoginPage';
+import RegisterPage from '@/pages/RegisterPage'; // Import the register page we just created
+import ProfilePage from '@/pages/ProfilePage';
+import ChatPage from '@/pages/ChatPage';
 
 function App() {
-	const [message, setMessage] = useState("Loading...");
-	const [error, setError] = useState("");
+  const checkAuth = useAuthStore((state) => state.checkAuth);
 
-	useEffect(() => {
-		const fetchHealth = async () => {
-			try {
-				const response = await fetch("http://localhost:3000/api/health");
+  /**
+   * App initialization phase:
+   * Check if a token exists in localStorage. If so, call GET /users/me
+   * to restore the authentication state.
+   * This is where the axiosInstance interceptor you implemented comes into play.
+   */
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
-				if (!response.ok) {
-					throw new Error(`HTTP error: ${response.status}`);
-				}
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* --- Public routes (accessible only to unauthenticated users) --- */}
+        <Route element={<PublicRoute />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} /> {/* Replaces the previous placeholder */}
+        </Route>
 
-				const data = await response.json();
-				setMessage(data.message);
-			} catch (err) {
-				setError("Failed to reach backend");
-				console.error(err);
-			}
-		};
+        {/* --- Protected routes (require authentication) --- */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          {/* Additional authenticated routes can be added here, e.g. /groups */}
+        </Route>
 
-		fetchHealth();
-	}, []);
-
-	return (
-		<div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-			<h1>Transcendence</h1>
-			<p>Frontend is running.</p>
-			<p>Backend message: {message}</p>
-			{error && <p>{error}</p>}
-		</div>
-	);
+        {/* 404 page */}
+        <Route path="*" element={
+          <div style={{ textAlign: 'center', marginTop: '50px' }}>
+            <h1>404</h1>
+            <p>Oops! Page not found.</p>
+          </div>
+        } />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
