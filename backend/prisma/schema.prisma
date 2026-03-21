@@ -12,14 +12,17 @@ datasource db {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String?
-  username     String  @unique
+  id           Int           @id @default(autoincrement())
+  email        String?       @unique
+  username     String        @unique
   passwordHash String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime      @default(now())
   profile      Profile?
-  oauth42Id    String? @unique
-  authProvider String   @default("local") 
+  oauth42Id    String?       @unique
+  authProvider String        @default("local")
+
+  ownedGroups  Group[]       @relation("OwnedGroups")
+  groupMembers GroupMember[]
 }
 
 model Profile {
@@ -32,4 +35,28 @@ model Profile {
   pronouns  String?
 
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Group {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime      @default(now())
+  ownerId     Int
+
+  owner       User          @relation("OwnedGroups", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+}
+
+model GroupMember {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  groupId   Int
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
 }
