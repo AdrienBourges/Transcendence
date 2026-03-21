@@ -60,6 +60,18 @@ export async function createGroupInvitation(req: Request, res: Response) {
 	return res.status(201).json(invitation);
 }
 
+export async function getReceivedGroupInvitations(req: Request, res: Response) {
+	if (!req.user) {
+		return res.status(401).json({
+			message: "Unauthorized",
+		});
+	}
+
+	const invitations = await groupService.getReceivedGroupInvitations(req.user.id);
+
+	return res.json(invitations);
+}
+
 export async function acceptGroupInvitation(req: Request, res: Response) {
 	if (!req.user) {
 		return res.status(401).json({
@@ -77,5 +89,50 @@ export async function acceptGroupInvitation(req: Request, res: Response) {
 
 	return res.json({
 		message: "Invitation accepted successfully",
+	});
+}
+
+export async function rejectGroupInvitation(req: Request, res: Response) {
+	if (!req.user) {
+		return res.status(401).json({
+			message: "Unauthorized",
+		});
+	}
+
+	const invitationId = Number(req.params.id);
+
+	if (Number.isNaN(invitationId)) {
+		throw new ApiError(400, "Invalid invitation id");
+	}
+
+	await groupService.rejectGroupInvitation(invitationId, req.user.id);
+
+	return res.json({
+		message: "Invitation rejected successfully",
+	});
+}
+
+export async function removeGroupMember(req: Request, res: Response) {
+	if (!req.user) {
+		return res.status(401).json({
+			message: "Unauthorized",
+		});
+	}
+
+	const groupId = Number(req.params.groupId);
+	const userId = Number(req.params.userId);
+
+	if (Number.isNaN(groupId)) {
+		throw new ApiError(400, "Invalid group id");
+	}
+
+	if (Number.isNaN(userId)) {
+		throw new ApiError(400, "Invalid user id");
+	}
+
+	await groupService.removeGroupMember(groupId, req.user.id, userId);
+
+	return res.json({
+		message: "Member removed successfully",
 	});
 }
