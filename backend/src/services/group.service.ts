@@ -1,4 +1,5 @@
 import prisma from "../prisma.js";
+import { ApiError } from "../utils/ApiError.js";
 
 type CreateGroupInput = {
 	name: string;
@@ -25,4 +26,40 @@ export async function createGroup(ownerId: number, data: CreateGroupInput) {
 
 		return group;
 	});
+}
+
+export async function getGroupById(groupId: number) {
+	const group = await prisma.group.findUnique({
+		where: { id: groupId },
+		select: {
+			id: true,
+			name: true,
+			description: true,
+			createdAt: true,
+			owner: {
+				select: {
+					id: true,
+					username: true,
+				},
+			},
+			members: {
+				select: {
+					role: true,
+					joinedAt: true,
+					user: {
+						select: {
+							id: true,
+							username: true,
+						},
+					},
+				},
+			},
+		},
+	});
+
+	if (!group) {
+		throw new ApiError(404, "Group not found");
+	}
+
+	return group;
 }
