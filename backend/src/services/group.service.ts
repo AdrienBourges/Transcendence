@@ -63,3 +63,30 @@ export async function getGroupById(groupId: number) {
 
 	return group;
 }
+
+export async function getMyGroups(userId: number) {
+	return prisma.groupMember.findMany({
+		where: { userId },
+		select: {
+			role: true,
+			joinedAt: true,
+			group: {
+				select: {
+					id: true,
+					name: true,
+					description: true,
+					createdAt: true,
+					owner: {
+						select: {
+							id: true,
+							username: true,
+						},
+					},
+				},
+			},
+		},
+		orderBy: {
+			joinedAt: "desc",
+		},
+	});
+}

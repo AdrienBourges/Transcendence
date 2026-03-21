@@ -25,3 +25,15 @@ export async function getGroupById(req: Request, res: Response) {
 
 	return res.json(group);
 }
+
+export async function getMyGroups(req: Request, res: Response) {
+	if (!req.user) {
+		return res.status(401).json({
+			message: "Unauthorized",
+		});
+	}
+
+	const groups = await groupService.getMyGroups(req.user.id);
+
+	return res.json(groups);
+}
