@@ -41,7 +41,7 @@ export const authApi = {
 
   // 5. Fetch the currently authenticated user profile
   getMe: () => 
-    axiosInstance.get<User>('/auth/me'),
+    axiosInstance.get<User>('/users/me'),
 
   // 6. Terminate the user session
   logout: () => 
