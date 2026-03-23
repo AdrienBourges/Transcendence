@@ -20,8 +20,7 @@ export async function oauth42Callback(req: Request, res: Response) {
 
 	try {
 		const result = await authService.oauth42Callback(code);
-		//res.json(result);
-		res.redirect(`http://localhost:5173/auth-callback?token=${result.token}`);
+		res.json(result);
 	} catch (error: unknown) {
 		console.error("OAuth42 callback error:", error);
 		const message =
