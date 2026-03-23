@@ -10,6 +10,10 @@ export interface User {
   avatarUrl?: string; // Reserved for backend upload feature
   createdAt?: string;
   updatedAt?: string;
+  authProvider?: string;
+  profile?: {
+    avatarUrl: string | null;
+  }
 }
 
 /**
