@@ -5,6 +5,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -26,6 +27,9 @@ model User {
 
   sentGroupInvitations      GroupInvitation[] @relation("SentGroupInvitations")
   receivedGroupInvitations  GroupInvitation[] @relation("ReceivedGroupInvitations")
+
+  follows  Friendship[] @relation("userFriends")
+  followers  Friendship[] @relation("friendUsers")
 }
 
 model Profile {
@@ -78,4 +82,12 @@ model GroupInvitation {
   invitedUser   User     @relation("ReceivedGroupInvitations", fields: [invitedUserId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, invitedUserId])
+}
+
+model Friendship {
+  userId    Int
+  friendId  Int
+  @@id([userId, friendId]) 
+  user      User   @relation("userFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User   @relation("friendUsers", fields: [friendId], references: [id], onDelete: Cascade)
 }
