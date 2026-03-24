@@ -1,5 +1,7 @@
 # Transcendence
 
+A social web application project developed for **42 students**.
+
 ## Current Status
 
 ### Frontend
@@ -7,6 +9,7 @@
 - Register page working: `http://localhost:5173/register`
 - Login page working: `http://localhost:5173/login`
 - Logout flow working
+- 42 OAuth login working from the frontend login flow
 
 ### Backend
 
@@ -18,6 +21,10 @@
 - Get public user profile by ID
 - Update current user profile
 - Avatar image upload to filesystem
+- Friendship feature:
+  - add a friend
+  - remove a friend
+  - get the current user's friend list
 
 ---
 
@@ -105,15 +112,14 @@ Currently available:
 
 ## 42 OAuth Login
 
-To test 42 OAuth, open this URL in your browser:
+42 OAuth can now be started directly from the frontend login page.
 
-```text
-https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-9ac612b679f1a8dccfab14517f2f446d97dd25e3b80380cb97ddbbe64b321423&redirect_uri=http://localhost:3000/api/auth/callback&response_type=code
-```
+### Frontend flow
 
-It will redirect to the backend callback:
-
-`http://localhost:3000/api/auth/callback`
+- open the frontend login page: `http://localhost:5173/login`
+- click **Login with 42**
+- the frontend redirects to the backend OAuth route
+- after authentication on the 42 side, the user is redirected back through the backend callback flow
 
 ---
 
@@ -142,6 +148,9 @@ Get the current authenticated user.
 #### `GET /api/users/:id`
 Get a public user profile by ID.
 
+#### `GET /api/users/me/friends` *(JWT required)*
+Get the current user's friend list.
+
 #### `PATCH /api/users/me` *(JWT required)*
 Update the current user's profile.
 
@@ -150,6 +159,14 @@ Example fields:
 - `languages`
 - `discord`
 - `pronouns`
+
+### Friends
+
+#### `POST /api/friends/:id` *(JWT required)*
+Add user `:id` to the current user's friend list.
+
+#### `DELETE /api/friends/:id` *(JWT required)*
+Remove user `:id` from the current user's friend list.
 
 ### Upload
 
@@ -169,6 +186,7 @@ Check database connection.
 ---
 
 ## API Test Commands
+
 ### Register
 
 ```bash
@@ -200,6 +218,33 @@ curl http://localhost:3000/api/users/me \
 curl http://localhost:3000/api/users/1
 ```
 
+### Get current user's friend list
+
+Replace `TOKEN` with the JWT returned by login.
+
+```bash
+curl http://localhost:3000/api/users/me/friends \
+  -H "Authorization: Bearer TOKEN"
+```
+
+### Add a friend
+
+Replace `TOKEN` with the JWT returned by login.
+
+```bash
+curl -X POST http://localhost:3000/api/friends/2 \
+  -H "Authorization: Bearer TOKEN"
+```
+
+### Remove a friend
+
+Replace `TOKEN` with the JWT returned by login.
+
+```bash
+curl -X DELETE http://localhost:3000/api/friends/2 \
+  -H "Authorization: Bearer TOKEN"
+```
+
 ### Update current user's profile
 
 Replace `TOKEN` with the JWT returned by login.
@@ -220,7 +265,7 @@ curl http://localhost:3000/api/health
 ### Database health check
 
 ```bash
-curl http://localhost:3000/api/db/health
+curl http://localhost:3000/api/db-health
 ```
 
 ### Upload avatar
@@ -235,14 +280,22 @@ curl -X POST http://localhost:3000/api/upload/avatar/ \
 
 ---
 
+## Friendship Feature Notes
+
+The friendship system is **unilateral**:
+
+- adding a user to your friend list does **not** require acceptance
+- adding a user does **not** automatically add you to their friend list
+- each user manages their own friend list independently
+
+---
+
 ## Notes
 
 - Frontend and backend currently run locally
 - HTTPS is not set up yet
 - PostgreSQL runs in Docker while the apps run on the host
 - Full Dockerization and nginx reverse proxy are planned
-- Groups, friends, search, and real-time chat are the next priorities
+- Groups, search, and real-time chat are next priorities
 
 ---
-
-
