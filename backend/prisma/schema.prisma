@@ -5,6 +5,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -19,7 +20,9 @@ model User {
   createdAt    DateTime @default(now())
   profile      Profile?
   oauth42Id    String? @unique
-  authProvider String   @default("local") 
+  authProvider String   @default("local")
+  follows  Friendship[] @relation("userFriends")
+  followers  Friendship[] @relation("friendUsers")
 }
 
 model Profile {
@@ -32,4 +35,12 @@ model Profile {
   pronouns  String?
 
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Friendship {
+  userId    Int
+  friendId  Int
+  @@id([userId, friendId]) 
+  user      User   @relation("userFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User   @relation("friendUsers", fields: [friendId], references: [id], onDelete: Cascade)
 }
