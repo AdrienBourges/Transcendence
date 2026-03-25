@@ -12,17 +12,20 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  email        String?       @unique
-  username     String        @unique
-  passwordHash String?
-  createdAt    DateTime      @default(now())
-  profile      Profile?
-  oauth42Id    String?       @unique
-  authProvider String        @default("local")
+  id                        Int               @id @default(autoincrement())
+  email                     String?           @unique
+  username                  String            @unique
+  passwordHash              String?
+  createdAt                 DateTime          @default(now())
+  profile                   Profile?
+  oauth42Id                 String?           @unique
+  authProvider              String            @default("local")
 
-  ownedGroups  Group[]       @relation("OwnedGroups")
-  groupMembers GroupMember[]
+  ownedGroups               Group[]           @relation("OwnedGroups")
+  groupMembers              GroupMember[]
+
+  sentGroupInvitations      GroupInvitation[] @relation("SentGroupInvitations")
+  receivedGroupInvitations  GroupInvitation[] @relation("ReceivedGroupInvitations")
 }
 
 model Profile {
@@ -46,6 +49,7 @@ model Group {
 
   owner       User          @relation("OwnedGroups", fields: [ownerId], references: [id], onDelete: Cascade)
   members     GroupMember[]
+  invitations GroupInvitation[]
 }
 
 model GroupMember {
@@ -59,4 +63,19 @@ model GroupMember {
   group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
+}
+
+model GroupInvitation {
+  id            Int      @id @default(autoincrement())
+  groupId       Int
+  invitedById   Int
+  invitedUserId Int
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+
+  group         Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invitedBy     User     @relation("SentGroupInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedUser   User     @relation("ReceivedGroupInvitations", fields: [invitedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, invitedUserId])
 }
