@@ -1,35 +1,57 @@
+// src/components/ProtectedRoute.tsx
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 
-// Protect routes that require authentication
+/**
+ * PROTECTED ROUTE
+ * Only allows authenticated users. 
+ * Prevents "Empty Shell" bug by checking isLoading.
+ */
 export const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuthStore();
 
-  // If user info is still loading (e.g., checking authentication), show a loading indicator
-  if (isLoading) return <div>Loading...</div>;
+  // 1. While checkAuth is running, show a clean loading screen
+  // This prevents the "Flash of Unstyled/Empty Content"
+  if (isLoading) {
+    return (
+      <div style={{ 
+        height: '100vh', 
+        background: '#050505', 
+        color: '#A2D2FF', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        fontFamily: 'JetBrains Mono, monospace' 
+      }}>
+        <div style={{ marginBottom: '10px' }}>[RE-ESTABLISHING_SECURE_LINK...]</div>
+        <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>AUTHENTICATING_NODE_CREDENTIALS</div>
+      </div>
+    );
+  }
 
-  // If not logged in, redirect to the login page
+  // 2. If finished loading and not logged in, kick to login page
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // If logged in, render child routes (Outlet)
+  // 3. If logged in, render the child route (HomePage, Profile, etc.)
   return <Outlet />;
 };
 
-// Protect routes that should only be accessible to unauthenticated users
-// (e.g., login or register pages; hidden from logged-in users)
+/**
+ * PUBLIC ROUTE
+ * Only allows GUESTS. 
+ * If a logged-in user tries to go to /login, they are sent back to / (Home).
+ */
 export const PublicRoute = () => {
   const { isAuthenticated, isLoading } = useAuthStore();
 
-  // Show loading indicator while authentication status is being determined
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return null; // Or a smaller spinner
 
-  // If user is already logged in, redirect to the homepage
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  // If not logged in, render child routes (Outlet)
   return <Outlet />;
 };
