@@ -10,6 +10,7 @@ A social web application project developed for **42 students**.
 - Login page working: `http://localhost:5173/login`
 - Logout flow working
 - 42 OAuth login working from the frontend login flow
+- Avatar update
 
 ### Backend
 
