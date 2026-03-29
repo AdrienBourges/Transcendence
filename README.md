@@ -13,6 +13,7 @@ A social web application project developed for **42 students**.
 - Profile update
 - Avatar update
 - Accesss someone's profile: http://localhost:5173/profile/:userid. (example: http://localhost:5173/profile/1)
+- Friendship feature (Add, Delete and see your own friendlist)
 
 ### Backend
 
