@@ -21,8 +21,10 @@ model User {
   profile      Profile?
   oauth42Id    String? @unique
   authProvider String   @default("local")
-  follows  Friendship[] @relation("userFriends")
-  followers  Friendship[] @relation("friendUsers")
+  follows      Friendship[] @relation("userFriends")
+  followers    Friendship[] @relation("friendUsers")
+  conversations ConversationParticipant[]
+  Messages      Message[]
 }
 
 model Profile {
@@ -43,4 +45,35 @@ model Friendship {
   @@id([userId, friendId]) 
   user      User   @relation("userFriends", fields: [userId], references: [id], onDelete: Cascade)
   friend    User   @relation("friendUsers", fields: [friendId], references: [id], onDelete: Cascade)
+}
+
+model Conversation{
+  id          Int   @id @default(autoincrement())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  Messages    Message[]
+  ConvParticipants    ConversationParticipant[]
+}
+
+model ConversationParticipant{
+  id          Int   @id @default(autoincrement())
+  convId      Int
+  userId      Int
+  Conv        Conversation  @relation(fields: [convId], references:[id], onDelete: Cascade)
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([convId, userId])
+  @@index([userId])
+}
+
+model Message{
+  id        Int @id @default(autoincrement())
+  convId    Int
+  senderId  Int
+  content   String
+  createdAt DateTime  @default(now())
+
+  conv      Conversation @relation(fields:[convId], references:[id], onDelete: Cascade)
+  sender        User    @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([convId, createdAt])
 }
