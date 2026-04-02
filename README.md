@@ -14,6 +14,10 @@ A social web application project developed for **42 students**.
 - Avatar update
 - Accesss someone's profile: http://localhost:5173/profile/:userid. (example: http://localhost:5173/profile/1)
 - Friendship feature (Add, Delete and see your own friendlist)
+<<<<<<< HEAD
+=======
+- Frontend chat integration is the next step: backend conversation routes and realtime events are now available
+>>>>>>> f6bb48f (update README)
 
 ### Backend
 
@@ -29,6 +33,15 @@ A social web application project developed for **42 students**.
   - add a friend
   - remove a friend
   - get the current user's friend list
+- Conversation backend:
+  - create or retrieve a private conversation
+  - get the current user's conversations
+  - get message history for a conversation
+- Realtime chat / presence with Socket.IO:
+  - join a conversation room with JWT + conversationId
+  - send realtime messages
+  - receive `message:new` events
+  - receive `presence:update` events when the other participant connects or disconnects
 
 ---
 
@@ -39,7 +52,7 @@ A social web application project developed for **42 students**.
 - **Database:** PostgreSQL
 - **Authentication:** JWT + 42 OAuth
 - **File Storage:** Backend filesystem
-- **Realtime / Chat:** planned
+- **Realtime / Chat:** Socket.IO backend implemented
 - **HTTPS / Reverse Proxy:** planned
 - **Full Dockerization:** planned
 
@@ -112,6 +125,8 @@ Currently available:
 - **Register:** `http://localhost:5173/register`
 - **Login:** `http://localhost:5173/login`
 
+For chat, a dedicated conversation page / component still has to be connected to the backend routes and Socket.IO events described below.
+
 ---
 
 ## 42 OAuth Login
@@ -171,6 +186,67 @@ Add user `:id` to the current user's friend list.
 
 #### `DELETE /api/friends/:id` *(JWT required)*
 Remove user `:id` from the current user's friend list.
+
+### Conversations *(JWT required)*
+
+#### `POST /api/conversations/private/:id`
+Create or retrieve a private conversation with user `:id`.
+
+Use this first when the frontend wants to open a chat with another user.
+
+#### `GET /api/conversations`
+Get the current user's private conversations.
+
+The response includes the other participant's basic public information.
+
+#### `GET /api/conversations/:id/messages`
+Get the message history of a conversation.
+
+The user must be part of the conversation.
+
+### Realtime Socket.IO chat
+
+Once the frontend has a valid conversation ID, it can connect to Socket.IO for realtime updates.
+
+#### Connection requirements
+
+The socket connection must send:
+
+- the JWT in `auth.token`
+- the conversation ID in `query.conversationId`
+
+The backend accepts the socket only if:
+
+- the JWT is valid
+- the user is part of the conversation
+
+#### Events received from backend
+
+- `message:new` → fired when a new message is saved in the conversation
+- `presence:update` → fired when a participant becomes online or offline in that conversation
+
+#### Event sent by frontend
+
+- `message:send` with payload:
+
+```json
+{
+  "content": "Hello"
+}
+```
+
+#### Frontend implementation notes
+
+Recommended chat flow for the frontend:
+
+1. Call `POST /api/conversations/private/:id` when the user opens a chat with another user.
+2. Store the returned conversation ID.
+3. Call `GET /api/conversations/:id/messages` to load the old messages.
+4. Open the Socket.IO connection only when the conversation page is opened.
+5. Connect with the JWT and the conversation ID.
+6. Listen to `message:new` and append incoming messages to the UI.
+7. Listen to `presence:update` to display online / offline state for the other participant.
+8. Emit `message:send` when the user sends a new message.
 
 ### Upload
 
@@ -260,6 +336,33 @@ curl -X PATCH http://localhost:3000/api/users/me \
   -d '{"avatarUrl":"https://example.com/avatar.png","languages":"fr,en","discord":"gholloco","pronouns":"he/him"}'
 ```
 
+### Create or retrieve a private conversation
+
+Replace `TOKEN` with the JWT returned by login. Replace `USER_ID` with the target user ID.
+
+```bash
+curl -X POST http://localhost:3000/api/conversations/private/USER_ID \
+  -H "Authorization: Bearer TOKEN"
+```
+
+### Get current user's conversations
+
+Replace `TOKEN` with the JWT returned by login.
+
+```bash
+curl http://localhost:3000/api/conversations \
+  -H "Authorization: Bearer TOKEN"
+```
+
+### Get conversation messages
+
+Replace `TOKEN` with the JWT returned by login and `CONVERSATION_ID` with a real conversation ID.
+
+```bash
+curl http://localhost:3000/api/conversations/CONVERSATION_ID/messages \
+  -H "Authorization: Bearer TOKEN"
+```
+
 ### Health check
 
 ```bash
@@ -300,6 +403,7 @@ The friendship system is **unilateral**:
 - HTTPS is not set up yet
 - PostgreSQL runs in Docker while the apps run on the host
 - Full Dockerization and nginx reverse proxy are planned
-- Groups, search, and real-time chat are next priorities
+- Groups and search are next priorities
+- Realtime chat backend is available; the next step is frontend integration of conversation pages and Socket.IO events
 
 ---
