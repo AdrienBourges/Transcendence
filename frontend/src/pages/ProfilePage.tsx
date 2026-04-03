@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useChatStore } from '@/store/useChatStore';
 import { AUTH_TOKEN_KEY } from '@/utils/constants';
 import axios from 'axios';
 
-const ProfilePage: React.FC = () => {
+// 2. Define component as a standard function instead of React.FC to avoid default export issues
+const ProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: me, checkAuth } = useAuthStore();
+  
+  // Get socket instance and actions from zustand store
+  const { socket, connect, sendMessage } = useChatStore();
 
   // --- State Management ---
   const [targetUser, setTargetUser] = useState<any>(null);
@@ -25,14 +30,49 @@ const ProfilePage: React.FC = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [chatHistory, setChatHistory] = useState<any[]>([]); 
+  const [conversationId, setConversationId] = useState<number | null>(null);
 
-  // Determine if viewing own profile
+  // --- Refs ---
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const isOwnProfile = !id || Number(id) === me?.id;
   const BABY_BLUE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23A2D2FF'/%3E%3C/svg%3E";
 
   /**
-   * Initial Data Fetching:
-   * Fetches user profile and checks friendship status
+   * Effect: Auto-scroll to bottom when chat history updates or modal opens
+   */
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [chatHistory, chatOpen]);
+
+  /**
+   * Effect: Real-time Message Listener 
+   * Listens for "message:new" event from backend
+   */
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (msg: any) => {
+      // Backend payload structure: { convId, senderId, content, createdAt }
+      if (msg.convId === conversationId) {
+        setChatHistory(prev => [...prev, {
+          sender: msg.senderId === me?.id ? 'me' : 'them',
+          text: msg.content,
+          time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
+    };
+
+    socket.on('message:new', handleNewMessage);
+    return () => {
+      socket.off('message:new', handleNewMessage);
+    };
+  }, [socket, conversationId, me?.id]);
+
+  /**
+   * Initial Data Fetching: User profile and friendship status
    */
   useEffect(() => {
     const fetchData = async () => {
@@ -44,13 +84,11 @@ const ProfilePage: React.FC = () => {
         if (isOwnProfile) {
           userData = me;
         } else {
-          // Fetch target user data
           const res = await axios.get(`http://localhost:3000/api/users/${id}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           userData = res.data;
 
-          // Check if already friends
           const friendsRes = await axios.get('http://localhost:3000/api/users/me/friends', {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -72,7 +110,7 @@ const ProfilePage: React.FC = () => {
   }, [id, me, isOwnProfile]);
 
   /**
-   * Action: Save Profile Changes
+   * Action: Patch profile data to backend
    */
   const handleSaveProfile = async () => {
     try {
@@ -90,9 +128,9 @@ const ProfilePage: React.FC = () => {
   };
 
   /**
-   * Action: Handle Avatar Upload
+   * Action: Upload profile picture
    */
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: any) => { // Use 'any' for event to avoid importing React.ChangeEvent
     const file = e.target.files?.[0];
     if (!file) return;
     const formData = new FormData();
@@ -112,7 +150,7 @@ const ProfilePage: React.FC = () => {
   };
 
   /**
-   * Action: Establish Link (Friend Request)
+   * Action: Send friend request
    */
   const handleAddFriend = async () => {
     try {
@@ -120,17 +158,54 @@ const ProfilePage: React.FC = () => {
       await axios.post(`http://localhost:3000/api/friends/${id}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setIsFriend(true); // Update UI immediately
+      setIsFriend(true);
     } catch (err) { alert('LINK_FAILED'); }
   };
 
   /**
-   * Action: Send Message (Local Simulation)
+   * Action: Initialize Chat (API Call + Socket Connection)
+   * Fixed path to match backend: /api/conversations/private/:id
+   */
+  const handleOpenChat = async () => {
+    if (isOwnProfile) return;
+    try {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      
+      // 1. Get/Create conversation ID using the correct private route
+      const convRes = await axios.post(`http://localhost:3000/api/conversations/private/${id}`, 
+        {}, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const curId = convRes.data.id;
+      setConversationId(curId);
+
+      // 2. Fetch Message History
+      const msgRes = await axios.get(`http://localhost:3000/api/conversations/${curId}/messages`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setChatHistory(msgRes.data.map((msg: any) => ({
+        sender: msg.senderId === me?.id ? 'me' : 'them',
+        text: msg.content,
+        time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      })));
+      
+      // 3. Trigger Socket connection with conversationId for handshake validation
+      if (connect) connect(curId);
+      
+      setChatOpen(true);
+    } catch (err: any) { 
+      console.error("CHAT_INIT_ERR", err);
+      alert(`CHAT_INIT_FAILED: ${err.response?.status || 'OFFLINE'}`); 
+    }
+  };
+
+  /**
+   * Action: Send Message via Socket (Uses "message:send" event)
    */
   const handleSendMessage = () => {
     if (!messageInput.trim()) return;
-    const newMsg = { sender: 'me', text: messageInput, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-    setChatHistory([...chatHistory, newMsg]);
+    sendMessage(messageInput);
     setMessageInput('');
   };
 
@@ -143,18 +218,14 @@ const ProfilePage: React.FC = () => {
   return (
     <>
       <style>{`
-        /* Root & Typography */
         .hp-root { min-height: 100vh; background: #050505; color: #fff; font-family: 'Inter', sans-serif; }
         .hp-main { padding: 40px 1.5rem 2rem; max-width: 1000px; margin: auto; }
         .hp-label { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #A2D2FF; text-transform: uppercase; font-weight: 700; }
         .hp-card { background: #0a0a0a; border: 1px solid #222; padding: 1.5rem; border-radius: 4px; }
-        
-        /* Interactive Elements */
         .hp-btn-outline { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid #555; color: #fff; font-weight: 700; cursor: pointer; text-align: center; font-family: 'JetBrains Mono'; margin-top: 10px; font-size: 0.8rem; border-radius: 4px; transition: 0.2s; }
         .hp-btn-outline:hover { border-color: #A2D2FF; color: #A2D2FF; }
         .hp-input { background: #111; border: 1px solid #333; color: #fff; padding: 10px; width: 100%; font-family: 'JetBrains Mono'; margin-top: 8px; margin-bottom: 15px; border-radius: 4px; box-sizing: border-box; }
         
-        /* Breathing Light Animation */
         @keyframes breathe {
           0% { opacity: 0.3; transform: scale(0.95); }
           50% { opacity: 1; transform: scale(1.05); }
@@ -163,7 +234,6 @@ const ProfilePage: React.FC = () => {
         .status-active { color: #00FF9C; font-size: 0.75rem; display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono'; }
         .status-dot { width: 8px; height: 8px; background: #00FF9C; border-radius: 50%; box-shadow: 0 0 8px #00FF9C; animation: breathe 2s infinite ease-in-out; }
 
-        /* Chat Modal Styles */
         .chat-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .chat-window { background: #0a0a0a; border: 1px solid #333; width: 420px; height: 550px; display: flex; flex-direction: column; border-radius: 4px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .chat-header { padding: 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
@@ -175,14 +245,12 @@ const ProfilePage: React.FC = () => {
 
       <div className="hp-root">
         <div className="hp-main">
-          {/* Navigation */}
           <div style={{ color: '#666', fontSize: '0.75rem', cursor: 'pointer', marginBottom: '20px' }} onClick={() => navigate('/')}>
             &lt; [SYSTEM_RETURN_DASHBOARD]
           </div>
 
-          {/* User Header Section */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '3rem' }}>
-            <img src={avatarSrc} style={{ width: '100px', height: '100px', borderRadius: '4px', border: '1px solid #333', objectFit: 'cover' }} />
+            <img src={avatarSrc} style={{ width: '100px', height: '100px', borderRadius: '4px', border: '1px solid #333', objectFit: 'cover' }} alt="Avatar" />
             <div>
               <div className="hp-label">{isOwnProfile ? "OWNER_ID" : "EXTERNAL_ENTITY"}</div>
               <h2 style={{ fontFamily: 'JetBrains Mono', fontSize: '1.8rem', margin: '5px 0' }}>{targetUser?.username}</h2>
@@ -193,7 +261,7 @@ const ProfilePage: React.FC = () => {
                     <button 
                       className="hp-btn-outline" 
                       style={{ width: 'auto', marginTop: 0, padding: '6px 16px', borderColor: '#A2D2FF', color: '#A2D2FF' }} 
-                      onClick={() => setChatOpen(true)}
+                      onClick={handleOpenChat}
                     >
                       [COMMUNICATE]
                     </button>
@@ -214,7 +282,6 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Main Content Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: isOwnProfile ? '280px 1fr' : '1fr', gap: '2rem' }}>
             {isOwnProfile && (
               <aside>
@@ -274,7 +341,7 @@ const ProfilePage: React.FC = () => {
                 <span style={{ cursor: 'pointer', color: '#666' }} onClick={() => setChatOpen(false)}>[CLOSE]</span>
               </div>
               
-              <div className="chat-body">
+              <div className="chat-body" ref={scrollRef}>
                 {chatHistory.length > 0 ? chatHistory.map((msg, i) => (
                   <div key={i} className={`chat-msg ${msg.sender === 'me' ? 'me' : 'them'}`}>
                     {msg.text}

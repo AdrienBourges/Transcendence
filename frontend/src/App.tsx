@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useChatStore } from '@/store/useChatStore';
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute';
 
-// --- Import page components ---
+// --- Pages ---
 import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -13,72 +14,97 @@ import AuthCallbackPage from '@/pages/AuthCallbackPage';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
+  const user = useAuthStore((state) => state.user);
+  
+  // Only use disconnect here for cleanup purposes
+  const disconnect = useChatStore((state) => state.disconnect);
 
   /**
-   * App initialization phase:
-   * Check if a token exists in localStorage.
-   * If it exists, call GET /users/me
-   * to restore authentication state.
+   * App initialization:
+   * Restore auth state from token (if exists)
    */
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
+  /**
+   * Socket lifecycle management:
+   * We do NOT call connect() here because it requires a conversationId.
+   * Connection is handled locally by pages (e.g., ProfilePage) after 
+   * retrieving a valid conversation ID from the backend.
+   */
+  useEffect(() => {
+    // If user logs out, ensure any active socket is terminated
+    if (!user) {
+      disconnect();
+    }
+
+    // Global cleanup on app unmount
+    return () => {
+      disconnect();
+    };
+  }, [user, disconnect]);
+
   return (
     <BrowserRouter>
       <Routes>
-        {/* --- Public routes (accessible only to non-authenticated users) --- */}
+        {/* --- Public routes (only for unauthenticated users) --- */}
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>
 
-        {/* --- OAuth callback route (must be outside all guards) ---
-            This route MUST NOT be inside PublicRoute or ProtectedRoute.
-            It handles the JWT returned from 42 OAuth and redirects to home.
-        */}
+        {/* --- OAuth callback (must stay outside guards) --- */}
         <Route path="/auth-callback" element={<AuthCallbackPage />} />
 
-        {/* --- Protected routes (authentication required) --- */}
+        {/* --- Protected routes (require authentication) --- */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/chat" element={<ChatPage />} />
-          
-          {/* Core logic: dynamic parameter :id
-             path="/profile/:id?" means :id is optional.
-             - /profile      -> shows current logged-in user
-             - /profile/42   -> shows user with ID 42
+
+          {/* Profile routing:
+              /profile      -> current user's profile
+              /profile/:id  -> specific user's profile
           */}
           <Route path="/profile/:id?" element={<ProfilePage />} />
         </Route>
 
-        {/* 404 page */}
-        <Route path="*" element={
-          <div style={{ 
-            textAlign: 'center', 
-            marginTop: '100px', 
-            fontFamily: 'JetBrains Mono, monospace',
-            color: '#fff',
-            background: '#050505',
-            height: '100vh'
-          }}>
-            <h1 style={{ color: '#A2D2FF', fontSize: '3rem' }}>404</h1>
-            <p style={{ opacity: 0.7 }}>[ERROR]: ROUTE_NOT_FOUND</p>
-            <a 
-              href="/" 
-              style={{ 
-                color: '#A2D2FF', 
-                textDecoration: 'none', 
-                border: '1px solid #A2D2FF', 
-                padding: '10px 20px', 
-                display: 'inline-block', 
-                marginTop: '20px' 
+        {/* --- 404 - Terminal Style --- */}
+        <Route
+          path="*"
+          element={
+            <div
+              style={{
+                textAlign: 'center',
+                paddingTop: '100px',
+                fontFamily: 'JetBrains Mono, monospace',
+                color: '#fff',
+                background: '#050505',
+                height: '100vh',
+                boxSizing: 'border-box'
               }}
             >
-              RETURN_TO_HOME
-            </a>
-          </div>
-        } />
+              <h1 style={{ color: '#A2D2FF', fontSize: '3.5rem', marginBottom: '10px' }}>404</h1>
+              <p style={{ opacity: 0.7, marginBottom: '30px' }}>[ERROR]: ROUTE_NOT_FOUND_IN_DATABASE</p>
+              <a
+                href="/"
+                style={{
+                  color: '#A2D2FF',
+                  textDecoration: 'none',
+                  border: '1px solid #A2D2FF',
+                  padding: '10px 24px',
+                  display: 'inline-block',
+                  fontSize: '0.9rem',
+                  transition: '0.2s'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(162, 210, 255, 0.1)')}
+                onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                RETURN_TO_HOME
+              </a>
+            </div>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
