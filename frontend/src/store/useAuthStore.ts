@@ -1,18 +1,12 @@
-// src/store/useAuthStore.ts
 import { create } from 'zustand';
-// Note: If you don't need persistence to LocalStorage (except for the Token), you can avoid using persist
-// Here we keep manual token management logic, which makes it clearer
 import type { User, LoginInput } from '@/types/auth'; 
 import { authApi } from '@/features/auth/api';
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
+  isLoading: boolean; // This is the key to preventing the "flicker"
 
-  /**
-   * Method definitions
-   */
   setUser: (user: User | null) => void;
   login: (credentials: LoginInput) => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -22,10 +16,10 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  isLoading: true,
+  isLoading: true, // Initially true while we check for existing tokens
 
   /**
-   * Update user information
+   * Manually update user state
    */
   setUser: (user) => set({ 
     user, 
@@ -34,13 +28,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   }),
 
   /**
-   * 1. Login logic
-   * Call API -> get data from response.data -> store token -> update state
+   * Login logic: Calls API, stores token, and updates global state
    */
   login: async (credentials: LoginInput) => {
     try {
       set({ isLoading: true });
-      // ✅ Fix: Axios data is in .data
       const { data } = await authApi.login(credentials);
       
       localStorage.setItem('auth_token', data.token);
@@ -51,36 +43,38 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
     } catch (error) {
       set({ user: null, isAuthenticated: false, isLoading: false });
-      throw error; // Re-throw error so LoginPage try-catch can handle and display it to the user
+      throw error; 
     }
   },
 
   /**
-   * 2. Initialization check: validate whether the token is valid on app startup
+   * App Startup Check: Validates the token and retrieves user data
    */
   checkAuth: async () => {
     const token = localStorage.getItem('auth_token');
+    
     if (!token) {
+      // No token found, finish loading and stay unauthenticated
       set({ user: null, isAuthenticated: false, isLoading: false });
       return;
     }
 
     try {
-      // ✅ Fix: extract .data (User object) from authApi.getMe() Axios response
+      // Validate token by fetching current user profile
       const { data } = await authApi.getMe();
       set({ user: data, isAuthenticated: true, isLoading: false });
     } catch (error) {
-      // If token is expired or invalid, clear local storage
+      // Token invalid or expired, clear storage and state
       localStorage.removeItem('auth_token');
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 
   /**
-   * 3. Logout logic
+   * Logout: Clears session and local storage
    */
   logout: () => {
     localStorage.removeItem('auth_token');
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false, isLoading: false });
   },
 }));

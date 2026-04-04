@@ -3,83 +3,83 @@ import { io, Socket } from 'socket.io-client';
 import { AUTH_TOKEN_KEY } from '@/utils/constants';
 
 interface ChatState {
-  socket: Socket | null;
-  isConnected: boolean;
-  connect: (conversationId: number) => void;
-  disconnect: () => void;
+  sockets: Map<number, Socket>;
+  activeConvId: number | null;
+  hasNotification: boolean;
+  setNotification: (value: boolean) => void;
+  setActiveConv: (convId: number | null) => void;
+  joinConversations: (convIds: number[]) => void; // Added batch join
+  disconnectAll: () => void;
   sendMessage: (content: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  socket: null,
-  isConnected: false,
+  sockets: new Map(),
+  activeConvId: null,
+  hasNotification: false,
 
-  connect: (conversationId: number) => {
-    const currentSocket = get().socket;
-    
-    // If already connected to the same conversation, return directly
-    if (currentSocket?.connected && Number(currentSocket.io.opts.query?.conversationId) === conversationId) {
-      return;
-    }
+  setNotification: (value) => set({ hasNotification: value }),
+  setActiveConv: (convId) => set({ activeConvId: convId }),
 
-    // If there is an old connection, clean it up first
-    if (currentSocket) {
-      currentSocket.disconnect();
-    }
-
+  joinConversations: (convIds: number[]) => {
+    const { sockets } = get();
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      console.error("--- [AUTH_TOKEN_MISSING] ---");
-      return;
-    }
+    if (!token) return;
 
-    // Initialize connection
-    const socket = io("http://localhost:3000", {
-      auth: { token },
-      query: { conversationId: conversationId.toString() }, 
-      transports: ['websocket'],
-      // Remove autoConnect: false, or manually call .connect() below
-      autoConnect: true, 
-      reconnection: true, // Recommended to enable reconnection for better stability
+    const newSockets = new Map(sockets);
+    let changed = false;
+
+    convIds.forEach((id) => {
+      const convId = Number(id);
+      if (newSockets.has(convId)) return; // Prevent duplicate connections
+
+      changed = true;
+      const socket = io("http://localhost:3000", {
+        auth: { token },
+        query: { conversationId: convId.toString() },
+        transports: ['websocket'],
+        autoConnect: false,
+      });
+
+      socket.on('message:new', (msg: any) => {
+        const { activeConvId } = get();
+        // Trigger notification only if the message is from a conversation not currently being viewed
+        if (Number(msg.convId) !== Number(activeConvId)) {
+          console.log(`🔔 [NOTIF] New message in ${msg.convId}`);
+          set({ hasNotification: true });
+        }
+      });
+
+      socket.on('connect_error', (err) => {
+        console.error(`⚠️ [SOCKET:${convId}]`, err.message);
+        // If "Bad Request", the user might have been removed from the conversation; perform auto-cleanup
+        if (err.message === 'Bad Request') {
+          const s = get().sockets.get(convId);
+          s?.disconnect();
+        }
+      });
+
+      socket.connect();
+      newSockets.set(convId, socket);
     });
 
-    socket.on('connect', () => {
-      console.log(`✅ --- [SYSTEM_LINK_START] --- CONV_ID: ${conversationId}`);
-      set({ isConnected: true });
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('❌ --- [SYSTEM_LINK_TERMINATED] --- REASON:', reason);
-      set({ isConnected: false });
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error("⚠️ --- [SOCKET_AUTH_FAILED] ---", err.message);
-      set({ isConnected: false });
-    });
-
-    // Explicitly start the connection
-    socket.connect();
-    set({ socket });
+    if (changed) set({ sockets: newSockets });
   },
 
-  disconnect: () => {
-    const { socket } = get();
-    if (socket) {
-      socket.disconnect();
-    }
-    set({ socket: null, isConnected: false });
+  disconnectAll: () => {
+    get().sockets.forEach(s => {
+      s.removeAllListeners();
+      s.disconnect();
+    });
+    set({ sockets: new Map(), activeConvId: null });
   },
 
   sendMessage: (content: string) => {
-    const { socket, isConnected } = get();
-    // Debug log: check status when sending
-    console.log("📤 Attempting to send:", content, "Status:", isConnected);
-    
-    if (socket && isConnected) {
+    const { sockets, activeConvId } = get();
+    if (activeConvId === null) return;
+    const socket = sockets.get(Number(activeConvId));
+    if (socket?.connected) {
       socket.emit("message:send", { content });
-    } else {
-      console.warn("🛑 --- [SEND_FAILED] --- Socket not connected");
     }
-  }
+  },
 }));
