@@ -166,9 +166,18 @@ const HomePage: React.FC = () => {
     }
   }, [user?.id, fetchConversations, fetchFriends]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const interval = setInterval(() => {
+      fetchConversations();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [user?.id, fetchConversations]);
+
   const handleOpenChat = (convId: string) => {
     setActiveChatId(convId);
     setActiveConv(Number(convId));
+    setNotification(false);
   };
 
   const handleCloseChat = () => {

@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/useAuthStore';
  */
 export const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuthStore();
-
+  //console.log('ProtectedRoute:', { isAuthenticated, isLoading });
   // 1. While checkAuth is running, show a clean loading screen
   // This prevents the "Flash of Unstyled/Empty Content"
   if (isLoading) {

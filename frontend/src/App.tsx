@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useChatStore } from '@/store/useChatStore'; // Ensure the path is correct
+import { useChatStore } from '@/store/useChatStore'; 
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute';
 
 // --- Pages ---
@@ -15,65 +15,64 @@ import AuthCallbackPage from '@/pages/AuthCallbackPage';
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const user = useAuthStore((state) => state.user);
-  const isLoading = useAuthStore((state) => state.isLoading);
   
-  // Update 1: Use the latest disconnectAll method
+  /**
+   * Session Management:
+   * Destroy all active Socket instances when the user logs out or the app unmounts.
+   * This uses the latest disconnectAll method from useChatStore.
+   */
   const disconnectAll = useChatStore((state) => state.disconnectAll);
 
+  // Initialize Authentication on App start
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
   /**
-   * Session Management:
-   * Destroy all active Socket instances when the user logs out or the app unmounts.
+   * Global Socket Cleanup:
+   * 1. If user becomes null (Logout), clear all socket links.
+   * 2. When App component unmounts, perform a thorough cleanup to prevent 
+   * duplicate connections during hot updates in development.
    */
   useEffect(() => {
     if (!user) {
-      // Update 2: Call the thorough cleanup method
       disconnectAll();
     }
     
     return () => {
-      // Cleanup on unmount to prevent duplicate connections during hot updates in development
       disconnectAll();
     };
   }, [user, disconnectAll]);
 
-  if (isLoading) {
-    return (
-      <div style={{
-        backgroundColor: '#050505',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'JetBrains Mono, monospace',
-        color: '#A2D2FF'
-      }}>
-        <div style={{ fontSize: '1.2rem', letterSpacing: '2px' }}>[INITIALIZING_SECURE_LINK...]</div>
-        <div style={{ marginTop: '10px', opacity: 0.5, fontSize: '0.8rem' }}>VERIFYING_CREDENTIALS_AT_NODE_42</div>
-      </div>
-    );
-  }
+  /**
+   * NOTE ON LOADING STATE:
+   * We no longer return the full-screen loader here at the top level.
+   * By wrapping everything in BrowserRouter immediately, we allow 
+   * ProtectedRoute to handle the 'isLoading' state internally.
+   * This prevents "ghost" renders where HomePage might try to load 
+   * with empty user data (showing ID: 0) before checkAuth finishes.
+   */
 
   return (
     <BrowserRouter>
       <Routes>
+        {/* --- Public Routes (Only accessible when NOT logged in) --- */}
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>
 
+        {/* --- Auth Callback (Handles OAuth redirects) --- */}
         <Route path="/auth-callback" element={<AuthCallbackPage />} />
 
+        {/* --- Protected Routes (Require valid Token/User) --- */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/profile/:id?" element={<ProfilePage />} />
         </Route>
 
+        {/* --- 404 Route (Styled for the 42 Transcendence theme) --- */}
         <Route
           path="*"
           element={
