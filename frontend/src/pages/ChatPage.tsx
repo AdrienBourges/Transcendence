@@ -7,10 +7,11 @@ import axios from 'axios';
 
 interface ChatPageProps {
   conversationId?: string; 
-  onClose?: () => void;    
+  onClose?: () => void;
+  otherUser?: { id: number, username: string, profile?: any } | null; // Passed from HomePage
 }
 
-const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose, otherUser: propsOtherUser }) => {
   const { id: urlId } = useParams<{ id: string }>();
   const activeId = propsId || urlId;
   const navigate = useNavigate();
@@ -21,21 +22,29 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
   const [chatHistory, setChatHistory] = useState<any[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(true);
-  
-  // Key point: store the other party's ID and username
-  const [otherUserInfo, setOtherUserInfo] = useState<{id: number, username: string} | null>(null);
-  
+  // Use prop value first, fall back to extracting from messages
+  const [otherUserInfo, setOtherUserInfo] = useState<{ id: number, username: string } | null>(propsOtherUser || null);
+  const [isPartnerOnline, setIsPartnerOnline] = useState<boolean>(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const BACKEND_URL = 'http://localhost:3000';
 
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory]);
 
+  // Sync otherUserInfo if prop changes (e.g. navigating between chats)
+  useEffect(() => {
+    if (propsOtherUser) {
+      setOtherUserInfo(propsOtherUser);
+    }
+  }, [propsOtherUser]);
+
   /**
-   * Initialize chat: fetch messages and lock the other party's identity
+   * Initialize chat: fetch message history and set active conversation
    */
   useEffect(() => {
     if (!activeId || !me?.id) return;
@@ -46,23 +55,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
         const token = localStorage.getItem(AUTH_TOKEN_KEY);
         setActiveConv(Number(activeId));
 
-        // 1. First fetch the message list
         const res = await axios.get(`${BACKEND_URL}/api/conversations/${activeId}/messages`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        // 2. Try to extract the other party's info from messages (if sender data is nested)
-        const themMsg = res.data.find((m: any) => m.senderId !== me.id);
-        if (themMsg && themMsg.sender) {
-          setOtherUserInfo({
-            id: themMsg.senderId,
-            username: themMsg.sender.username
-          });
-        } 
-        // 3. Fallback: if no data in messages, get it from conversation metadata (if your backend supports it)
-        else {
-           // If the previous 404 was due to this endpoint not existing, we manually parse activeId or rely on socket updates below
-           console.log("No sender info in messages, waiting for socket or metadata...");
+        // Only extract from messages if not already provided via props
+        if (!propsOtherUser) {
+          const themMsg = res.data.find((m: any) => m.senderId !== me.id);
+          if (themMsg && themMsg.sender) {
+            setOtherUserInfo({ id: themMsg.senderId, username: themMsg.sender.username });
+          }
         }
 
         const formattedMsgs = res.data.map((msg: any) => ({
@@ -71,7 +73,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
           text: msg.content,
           time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }));
-        
+
         setChatHistory(formattedMsgs);
       } catch (err) {
         console.error("CHAT_LOAD_ERROR", err);
@@ -85,7 +87,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
   }, [activeId, me?.id, setActiveConv]);
 
   /**
-   * Real-time message listener: dynamically update the other party's info
+   * Real-time message + presence listeners
    */
   useEffect(() => {
     const convIdNum = Number(activeId);
@@ -95,35 +97,49 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
     const handleNewMessage = (msg: any) => {
       if (Number(msg.convId) === convIdNum) {
         setChatHistory(prev => [...prev, {
+          senderId: msg.senderId,
           sender: msg.senderId === me?.id ? 'me' : 'them',
           text: msg.content,
           time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }]);
 
-        // If we still don't have the other party's info when receiving a message, fill it immediately from the message payload
+        // Last resort: fill other user info from live message if still missing
         if (!otherUserInfo && msg.senderId !== me?.id && msg.sender) {
           setOtherUserInfo({ id: msg.senderId, username: msg.sender.username });
         }
       }
     };
 
+    // Listen for partner online/offline events from backend presenceMap
+    const handlePresenceUpdate = (data: { userId: number; online: boolean }) => {
+      if (data.userId !== me?.id) {
+        setIsPartnerOnline(data.online);
+        console.log(`👁 [PRESENCE] User ${data.userId} is now ${data.online ? 'ONLINE' : 'OFFLINE'}`);
+      }
+    };
+
     currentSocket.on('message:new', handleNewMessage);
-    return () => currentSocket.off('message:new', handleNewMessage);
+    currentSocket.on('presence:update', handlePresenceUpdate);
+
+    return () => {
+      currentSocket.off('message:new', handleNewMessage);
+      currentSocket.off('presence:update', handlePresenceUpdate);
+    };
   }, [sockets, activeId, me?.id, otherUserInfo]);
 
-  // --- Key fix: force navigation function ---
+  /**
+   * Navigate to the other user's profile page
+   */
   const handleJumpToProfile = () => {
-    // If otherUserInfo is not loaded yet, try to find the first senderId that is not the current user from chatHistory
     let targetId = otherUserInfo?.id;
-    
+
     if (!targetId) {
       const lastThemMsg = chatHistory.find(m => m.sender === 'them');
       if (lastThemMsg) targetId = lastThemMsg.senderId;
     }
 
     if (targetId) {
-      console.log("Jumping to profile of node:", targetId);
-      if (onClose) onClose(); // Must close the modal first
+      if (onClose) onClose();
       navigate(`/profile/${targetId}`);
     } else {
       alert("ERROR: NODE_IDENTITY_NOT_FOUND. Need at least one message to identify peer.");
@@ -132,27 +148,54 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
 
   const handleSend = () => {
     if (!messageInput.trim()) return;
-    sendMessage(messageInput); 
+    sendMessage(messageInput);
     setMessageInput('');
   };
 
-  if (loading) return <div style={{ color: '#A2D2FF', padding: '20px', fontFamily: 'JetBrains Mono' }}>[SYNCING_SECURE_CHANNEL...]</div>;
+  if (loading) return (
+    <div style={{ color: '#A2D2FF', padding: '20px', fontFamily: 'JetBrains Mono' }}>
+      [SYNCING_SECURE_CHANNEL...]
+    </div>
+  );
 
   return (
     <div className="chat-container">
       <div className="chat-header">
         <div className="chat-title-area" onClick={handleJumpToProfile}>
-          <span className="chat-label">
-            <span style={{ color: '#444' }}>&gt; </span>
-            {otherUserInfo ? (
-              <>NODE: <span className="highlight-user">{otherUserInfo.username}</span></>
-            ) : (
-              <>CHANNEL_ID: <span className="highlight-user">{activeId}</span></>
-            )}
-          </span>
+          <div>
+            <span className="chat-label">
+              <span style={{ color: '#444' }}>&gt; </span>
+              {otherUserInfo ? (
+                <>NODE: <span className="highlight-user">{otherUserInfo.username}</span></>
+              ) : (
+                <>CHANNEL_ID: <span className="highlight-user">{activeId}</span></>
+              )}
+            </span>
+
+            {/* Partner presence indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
+              <div style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: isPartnerOnline ? '#4ade80' : '#444',
+                boxShadow: isPartnerOnline ? '0 0 8px #4ade80' : 'none',
+                transition: '0.3s'
+              }} />
+              <span style={{
+                fontSize: '0.55rem',
+                color: isPartnerOnline ? '#4ade80' : '#444',
+                fontFamily: 'JetBrains Mono',
+                textTransform: 'uppercase',
+                transition: '0.3s'
+              }}>
+                {isPartnerOnline ? 'LINK JUST ACTIVE' : 'LINK INACTIVE'}
+              </span>
+            </div>
+          </div>
           <span className="jump-hint">[ACCESS_DATA]</span>
         </div>
-        
+
         {onClose && (
           <button onClick={onClose} className="chat-close-btn">[TERMINATE]</button>
         )}
@@ -170,7 +213,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
       </div>
 
       <div className="chat-input-area">
-        <input 
+        <input
           value={messageInput}
           onChange={(e) => setMessageInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -181,7 +224,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
 
       <style>{`
         .chat-container { height: 100%; display: flex; flex-direction: column; background: #0a0a0a; border-radius: 4px; overflow: hidden; border: 1px solid #222; }
-        .chat-header { padding: 12px 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; background: #0f0f0f; cursor: default; }
+        .chat-header { padding: 12px 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; background: #0f0f0f; }
         .chat-title-area { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; }
         .chat-label { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #A2D2FF; }
         .highlight-user { color: #fff; margin-left: 5px; transition: 0.2s; }
@@ -195,6 +238,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose })
         .msg-time { font-size: 0.5rem; opacity: 0.3; margin-top: 5px; text-align: right; }
         .chat-input-area { padding: 15px; border-top: 1px solid #222; display: flex; gap: 10px; background: #0a0a0a; }
         .chat-input-area input { flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 2px; font-family: 'JetBrains Mono'; font-size: 0.75rem; outline: none; }
+        .chat-input-area input:focus { border-color: #A2D2FF; }
         .chat-input-area button { background: #A2D2FF; border: none; padding: 0 15px; border-radius: 2px; cursor: pointer; font-weight: bold; font-family: 'JetBrains Mono'; font-size: 0.7rem; }
         .chat-close-btn { background: none; border: none; color: #444; cursor: pointer; font-size: 0.6rem; font-family: 'JetBrains Mono'; }
         .chat-close-btn:hover { color: #ff5555; }

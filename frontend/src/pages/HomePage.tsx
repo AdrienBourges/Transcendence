@@ -28,6 +28,8 @@ const HomePage: React.FC = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [friendsList, setFriendsList] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  
+  const [activeChatUser, setActiveChatUser] = useState<any | null>(null);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -174,15 +176,17 @@ const HomePage: React.FC = () => {
     return () => clearInterval(interval);
   }, [user?.id, fetchConversations]);
 
-  const handleOpenChat = (convId: string) => {
-    setActiveChatId(convId);
-    setActiveConv(Number(convId));
+  const handleOpenChat = (conv: any) => {
+    setActiveChatId(conv.id.toString());
+    setActiveConv(conv.id);
+    setActiveChatUser(conv.otherUser);
     setNotification(false);
   };
 
   const handleCloseChat = () => {
     setActiveChatId(null);
     setActiveConv(null);
+    setActiveChatUser(null);
   };
 
   const getAvatarUrl = (path: string | null | undefined) => {
@@ -341,7 +345,7 @@ const HomePage: React.FC = () => {
               <div className="hp-label">INBOUND_COMMUNICATIONS</div>
               <div className="mail-list">
                 {conversations && conversations.length > 0 ? conversations.map(conv => (
-                  <div key={conv.id} className="mail-item" onClick={() => handleOpenChat(conv.id.toString())}>
+                  <div key={conv.id} className="mail-item" onClick={() => handleOpenChat(conv)}>
                     <img 
                       src={getAvatarUrl(conv.otherUser.profile?.avatarUrl)} 
                       className="mail-avatar" alt="avatar"
@@ -398,7 +402,11 @@ const HomePage: React.FC = () => {
         {activeChatId && (
           <div className="chat-overlay" onClick={handleCloseChat}>
             <div className="chat-window" onClick={e => e.stopPropagation()}>
-              <ChatPage conversationId={activeChatId} onClose={handleCloseChat} />
+              <ChatPage 
+                conversationId={activeChatId} 
+                onClose={handleCloseChat} 
+                otherUser={activeChatUser}
+              />
             </div>
           </div>
         )}

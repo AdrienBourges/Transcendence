@@ -1,21 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useChatStore } from '@/store/useChatStore';
 import { AUTH_TOKEN_KEY } from '@/utils/constants';
 import axios from 'axios';
+import ChatPage from './ChatPage';
 
 const ProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: me, checkAuth } = useAuthStore();
   
-  /**
-   * ✅ Store Integration
-   * We use 'joinConversations' (plural) to initialize the socket for this specific room.
-   * 'setActiveConv' is crucial so 'sendMessage' knows which socket instance to use.
-   */
-  const { sockets, joinConversations, setActiveConv, sendMessage } = useChatStore();
+  const { joinConversations, setActiveConv } = useChatStore();
 
   // --- Profile States ---
   const [targetUser, setTargetUser] = useState<any>(null);
@@ -31,51 +27,15 @@ const ProfilePage = () => {
 
   // --- Chat States ---
   const [chatOpen, setChatOpen] = useState(false);
-  const [messageInput, setMessageInput] = useState('');
-  const [chatHistory, setChatHistory] = useState<any[]>([]); 
-  const [conversationId, setConversationId] = useState<number | null>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChatUser, setActiveChatUser] = useState<{ id: number, username: string } | null>(null);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const isOwnProfile = !id || Number(id) === me?.id;
   const BACKEND_URL = 'http://localhost:3000';
   const BABY_BLUE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23A2D2FF'/%3E%3C/svg%3E";
 
-  // Auto-scroll to latest message
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [chatHistory, chatOpen]);
-
   /**
-   * ✅ Real-time Message Listener
-   * We extract the specific socket for this conversation from the 'sockets' Map.
-   */
-  useEffect(() => {
-    if (!conversationId) return;
-
-    const currentSocket = sockets.get(conversationId);
-    if (!currentSocket) return;
-
-    const handleNewMessage = (msg: any) => {
-      // Logic: If message belongs to this conversation, update local history
-      if (Number(msg.convId) === conversationId) {
-        setChatHistory(prev => [...prev, {
-          sender: msg.senderId === me?.id ? 'me' : 'them',
-          text: msg.content,
-          time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }]);
-      }
-    };
-
-    currentSocket.on('message:new', handleNewMessage);
-    return () => {
-      currentSocket.off('message:new', handleNewMessage);
-    };
-  }, [sockets, conversationId, me?.id]);
-
-  /**
-   * Initial Data Fetch
+   * Initial data fetch: profile info and friendship status
    */
   useEffect(() => {
     const fetchData = async () => {
@@ -95,8 +55,7 @@ const ProfilePage = () => {
           const friendsRes = await axios.get(`${BACKEND_URL}/api/users/me/friends`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          const alreadyFriend = friendsRes.data.some((f: any) => f.id === Number(id));
-          setIsFriend(alreadyFriend);
+          setIsFriend(friendsRes.data.some((f: any) => f.id === Number(id)));
         }
         
         setTargetUser(userData);
@@ -113,39 +72,27 @@ const ProfilePage = () => {
   }, [id, me, isOwnProfile]);
 
   /**
-   * ✅ Chat Initialization
-   * Logic: 1. Get Room ID -> 2. Load History -> 3. Join Socket -> 4. Set Active Context
+   * Open chat: get/create conversation, join socket, open ChatPage modal
    */
   const handleOpenChat = async () => {
     if (isOwnProfile) return;
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       
-      // 1. Get/Create Private Conversation ID
+      // Get or create the private conversation
       const convRes = await axios.post(`${BACKEND_URL}/api/conversations/private/${id}`, 
         {}, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const curId = Number(convRes.data.id);
-      setConversationId(curId);
 
-      // 2. Fetch History
-      const msgRes = await axios.get(`${BACKEND_URL}/api/conversations/${curId}/messages`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setChatHistory(msgRes.data.map((msg: any) => ({
-        sender: msg.senderId === me?.id ? 'me' : 'them',
-        text: msg.content,
-        time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      })));
-      
-      // 3. ✅ Join Socket (Using plural function and array as per your Store)
-      joinConversations([curId]); 
-      
-      // 4. ✅ Mark as active so sendMessage() emits to the correct socket
+      // Join socket room for this conversation
+      joinConversations([curId]);
+
+      // Set chat context — same pattern as HomePage
+      setActiveChatId(curId.toString());
+      setActiveChatUser({ id: Number(id), username: targetUser?.username });
       setActiveConv(curId);
-      
       setChatOpen(true);
     } catch (err: any) { 
       console.error("CHAT_INIT_ERR", err);
@@ -155,21 +102,15 @@ const ProfilePage = () => {
 
   const handleCloseChat = () => {
     setChatOpen(false);
-    setActiveConv(null); // Clear active context when closing
-  };
-
-  const handleSendMessage = () => {
-    if (!messageInput.trim()) return;
-    sendMessage(messageInput);
-    setMessageInput('');
+    setActiveChatId(null);
+    setActiveChatUser(null);
+    setActiveConv(null);
   };
 
   const handleSaveProfile = async () => {
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      await axios.patch(`${BACKEND_URL}/api/users/me`, {
-        discord, pronouns, languages
-      }, {
+      await axios.patch(`${BACKEND_URL}/api/users/me`, { discord, pronouns, languages }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       await checkAuth(); 
@@ -202,7 +143,11 @@ const ProfilePage = () => {
     } catch (err) { alert('LINK_FAILED'); }
   };
 
-  if (loading) return <div style={{ color: '#A2D2FF', padding: '20px', fontFamily: 'JetBrains Mono' }}>[ACCESSING_DATABASE...]</div>;
+  if (loading) return (
+    <div style={{ color: '#A2D2FF', padding: '20px', fontFamily: 'JetBrains Mono' }}>
+      [ACCESSING_DATABASE...]
+    </div>
+  );
 
   const avatarSrc = targetUser?.profile?.avatarUrl 
     ? `${BACKEND_URL}${targetUser.profile.avatarUrl}?t=${Date.now()}` 
@@ -218,14 +163,8 @@ const ProfilePage = () => {
         .hp-btn-outline { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid #555; color: #fff; font-weight: 700; cursor: pointer; text-align: center; font-family: 'JetBrains Mono'; margin-top: 10px; font-size: 0.8rem; border-radius: 4px; transition: 0.2s; }
         .hp-btn-outline:hover { border-color: #A2D2FF; color: #A2D2FF; }
         .hp-input { background: #111; border: 1px solid #333; color: #fff; padding: 10px; width: 100%; font-family: 'JetBrains Mono'; margin-top: 8px; margin-bottom: 15px; border-radius: 4px; box-sizing: border-box; }
-        
         .chat-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .chat-window { background: #0a0a0a; border: 1px solid #333; width: 420px; height: 550px; display: flex; flex-direction: column; border-radius: 4px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        .chat-header { padding: 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-        .chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        .chat-msg { max-width: 80%; padding: 10px 14px; border-radius: 4px; font-size: 0.85rem; line-height: 1.4; }
-        .chat-msg.me { align-self: flex-end; background: #1a1a1a; border: 1px solid #A2D2FF; color: #A2D2FF; }
-        .chat-msg.them { align-self: flex-start; background: #111; border: 1px solid #333; color: #eee; }
+        .chat-window { background: #0a0a0a; border: 1px solid #333; width: 450px; height: 600px; border-radius: 4px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden; }
       `}</style>
 
       <div className="hp-root">
@@ -244,8 +183,12 @@ const ProfilePage = () => {
                   <button className="hp-btn-outline" style={{ width: 'auto', padding: '6px 16px', borderColor: '#A2D2FF', color: '#A2D2FF' }} onClick={handleOpenChat}>
                     [COMMUNICATE]
                   </button>
-                  {isFriend ? <span style={{ color: '#00FF9C', fontSize: '0.75rem', alignSelf: 'center' }}>● LINKED</span> : (
-                    <button className="hp-btn-outline" style={{ width: 'auto', padding: '6px 16px' }} onClick={handleAddFriend}>[ADD FRIENDNODE]</button>
+                  {isFriend ? (
+                    <span style={{ color: '#00FF9C', fontSize: '0.75rem', alignSelf: 'center' }}>● LINKED</span>
+                  ) : (
+                    <button className="hp-btn-outline" style={{ width: 'auto', padding: '6px 16px' }} onClick={handleAddFriend}>
+                      [ADD_FRIENDNODE]
+                    </button>
                   )}
                 </div>
               )}
@@ -261,7 +204,9 @@ const ProfilePage = () => {
                   <label htmlFor="avatar-input" className="hp-btn-outline" style={{ cursor: 'pointer' }}>
                     {uploading ? 'SYNCING...' : '[UPDATE_AVATAR]'}
                   </label>
-                  <button className="hp-btn-outline" onClick={() => setIsEditing(!isEditing)}>{isEditing ? '[CANCEL]' : '[EDIT_BIO]'}</button>
+                  <button className="hp-btn-outline" onClick={() => setIsEditing(!isEditing)}>
+                    {isEditing ? '[CANCEL]' : '[EDIT_BIO]'}
+                  </button>
                 </div>
               </aside>
             )}
@@ -269,42 +214,42 @@ const ProfilePage = () => {
               <span className="hp-label">Data_Field</span>
               <div style={{ marginTop: '20px', fontFamily: 'JetBrains Mono' }}>
                 <p style={{ color: '#A2D2FF', fontSize: '0.7rem' }}>DISCORD:</p>
-                {isEditing ? <input className="hp-input" value={discord} onChange={(e) => setDiscord(e.target.value)} /> : <p style={{ marginBottom: '20px' }}>{targetUser?.profile?.discord || 'UNDIFINED'}</p>}
+                {isEditing ? (
+                  <input className="hp-input" value={discord} onChange={(e) => setDiscord(e.target.value)} />
+                ) : (
+                  <p style={{ marginBottom: '20px' }}>{targetUser?.profile?.discord || 'UNDEFINED'}</p>
+                )}
                 <p style={{ color: '#A2D2FF', fontSize: '0.7rem' }}>PRONOUNS:</p>
-                {isEditing ? <input className="hp-input" value={pronouns} onChange={(e) => setPronouns(e.target.value)} /> : <p style={{ marginBottom: '20px' }}>{targetUser?.profile?.pronouns || 'UNDIFINED'}</p>}
+                {isEditing ? (
+                  <input className="hp-input" value={pronouns} onChange={(e) => setPronouns(e.target.value)} />
+                ) : (
+                  <p style={{ marginBottom: '20px' }}>{targetUser?.profile?.pronouns || 'UNDEFINED'}</p>
+                )}
                 <p style={{ color: '#A2D2FF', fontSize: '0.7rem' }}>LANGUAGES:</p>
-                {isEditing ? <input className="hp-input" value={languages} onChange={(e) => setLanguages(e.target.value)} /> : <p>{targetUser?.profile?.languages || 'UNDIFINED'}</p>}
-                {isEditing && <button className="hp-btn-outline" style={{ borderColor: '#A2D2FF', color: '#A2D2FF' }} onClick={handleSaveProfile}>SAVE_CHANGES</button>}
+                {isEditing ? (
+                  <input className="hp-input" value={languages} onChange={(e) => setLanguages(e.target.value)} />
+                ) : (
+                  <p>{targetUser?.profile?.languages || 'UNDEFINED'}</p>
+                )}
+                {isEditing && (
+                  <button className="hp-btn-outline" style={{ borderColor: '#A2D2FF', color: '#A2D2FF' }} onClick={handleSaveProfile}>
+                    SAVE_CHANGES
+                  </button>
+                )}
               </div>
             </main>
           </div>
         </div>
 
-        {/* Modal Chat Window */}
-        {chatOpen && (
+        {/* Chat Modal — reuses the same ChatPage component as HomePage */}
+        {chatOpen && activeChatId && (
           <div className="chat-overlay" onClick={handleCloseChat}>
             <div className="chat-window" onClick={e => e.stopPropagation()}>
-              <div className="chat-header">
-                <span className="hp-label">CHANNEL: {targetUser?.username}</span>
-                <button style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }} onClick={handleCloseChat}>[ESC]</button>
-              </div>
-              <div className="chat-body" ref={scrollRef}>
-                {chatHistory.length > 0 ? chatHistory.map((msg, i) => (
-                  <div key={i} className={`chat-msg ${msg.sender === 'me' ? 'me' : 'them'}`}>
-                    {msg.text}
-                    <div style={{ fontSize: '0.55rem', opacity: 0.4, marginTop: '5px', textAlign: 'right' }}>{msg.time}</div>
-                  </div>
-                )) : <div style={{ textAlign: 'center', marginTop: '100px', color: '#333' }}>[NO_DATA_LOGS]</div>}
-              </div>
-              <div style={{ padding: '15px', borderTop: '1px solid #222', display: 'flex', gap: '10px' }}>
-                <input 
-                  style={{ flex: 1, background: '#050505', border: '1px solid #333', color: '#fff', padding: '10px', borderRadius: '2px', fontFamily: 'JetBrains Mono' }}
-                  placeholder="Type message..." value={messageInput} 
-                  onChange={(e) => setMessageInput(e.target.value)} 
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} 
-                />
-                <button onClick={handleSendMessage} style={{ background: '#A2D2FF', border: 'none', padding: '0 15px', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold' }}>SEND</button>
-              </div>
+              <ChatPage
+                conversationId={activeChatId}
+                onClose={handleCloseChat}
+                otherUser={activeChatUser}
+              />
             </div>
           </div>
         )}
