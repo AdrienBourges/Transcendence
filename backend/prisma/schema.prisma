@@ -51,6 +51,9 @@ model Group {
   id          Int           @id @default(autoincrement())
   name        String
   description String?
+  projectName String		
+  deadline	  DateTime?
+  isBonus	  Boolean		@default(false)
   createdAt   DateTime      @default(now())
   ownerId     Int
 

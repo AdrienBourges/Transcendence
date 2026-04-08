@@ -4,6 +4,17 @@ import { ApiError } from "../utils/ApiError.js";
 type CreateGroupInput = {
 	name: string;
 	description?: string;
+	projectName: string;
+	deadline?: string;
+	isBonus?: boolean;
+};
+
+type UpdateGroupInput = {
+	name?: string;
+	description?: string | null;
+	projectName?: string;
+	deadline?: string | null;
+	isBonus?: boolean;
 };
 
 export async function createGroup(ownerId: number, data: CreateGroupInput) {
@@ -12,6 +23,9 @@ export async function createGroup(ownerId: number, data: CreateGroupInput) {
 			data: {
 				name: data.name,
 				description: data.description,
+				projectName: data.projectName,
+				deadline: data.deadline ? new Date(data.deadline) : null,
+				isBonus: data.isBonus ?? false,
 				ownerId,
 			},
 		});
@@ -35,6 +49,9 @@ export async function getGroupById(groupId: number) {
 			id: true,
 			name: true,
 			description: true,
+			projectName: true,
+			deadline: true,
+			isBonus: true,
 			createdAt: true,
 			owner: {
 				select: {
@@ -52,6 +69,9 @@ export async function getGroupById(groupId: number) {
 							username: true,
 						},
 					},
+				},
+				orderBy: {
+					joinedAt: "asc",
 				},
 			},
 		},
@@ -75,6 +95,9 @@ export async function getMyGroups(userId: number) {
 					id: true,
 					name: true,
 					description: true,
+					projectName: true,
+					deadline: true,
+					isBonus: true,
 					createdAt: true,
 					owner: {
 						select: {
@@ -88,6 +111,103 @@ export async function getMyGroups(userId: number) {
 		orderBy: {
 			joinedAt: "desc",
 		},
+	});
+}
+
+export async function updateGroup(groupId: number, currentUserId: number, data: UpdateGroupInput) {
+	const group = await prisma.group.findUnique({
+		where: { id: groupId },
+		select: {
+			id: true,
+			ownerId: true,
+		},
+	});
+
+	if (!group) {
+		throw new ApiError(404, "Group not found");
+	}
+
+	if (group.ownerId !== currentUserId) {
+		throw new ApiError(403, "Only the group owner can update this group");
+	}
+
+	return prisma.group.update({
+		where: { id: groupId },
+		data: {
+			...(data.name !== undefined && { name: data.name }),
+			...(data.description !== undefined && { description: data.description }),
+			...(data.projectName !== undefined && { projectName: data.projectName }),
+			...(data.deadline !== undefined && {
+				deadline: data.deadline ? new Date(data.deadline) : null,
+			}),
+			...(data.isBonus !== undefined && { isBonus: data.isBonus }),
+		},
+		select: {
+			id: true,
+			name: true,
+			description: true,
+			projectName: true,
+			deadline: true,
+			isBonus: true,
+			createdAt: true,
+			owner: {
+				select: {
+					id: true,
+					username: true,
+				},
+			},
+		},
+	});
+}
+
+export async function deleteGroup(groupId: number, currentUserId: number) {
+	const group = await prisma.group.findUnique({
+		where: { id: groupId },
+		select: {
+			id: true,
+			ownerId: true,
+		},
+	});
+
+	if (!group) {
+		throw new ApiError(404, "Group not found");
+	}
+
+	if (group.ownerId !== currentUserId) {
+		throw new ApiError(403, "Only the group owner can delete this group");
+	}
+
+	await prisma.group.delete({
+		where: { id: groupId },
+	});
+}
+
+export async function getGroupMembers(groupId: number) {
+	const group = await prisma.group.findUnique({
+		where: { id: groupId },
+		select: { id: true },
+	});
+
+	if (!group) {
+		throw new ApiError(404, "Group not found");
+	}
+
+	return prisma.groupMember.findMany({
+		where: { groupId },
+		select: {
+			id: true,
+			role: true,
+			joinedAt: true,
+			user: {
+				select: {
+					id: true,
+					username: true,
+				},
+			},
+		},
+		orderBy: [
+			{ joinedAt: "asc" },
+		],
 	});
 }
 
@@ -144,10 +264,7 @@ export async function createGroupInvitation(groupId: number, currentUserId: numb
 	});
 
 	if (existingInvitation) {
-		throw new ApiError(
-			409,
-			"A group invitation already exists for this user"
-		);
+		throw new ApiError(409, "A group invitation already exists for this user");
 	}
 
 	return prisma.groupInvitation.create({
@@ -175,6 +292,9 @@ export async function getReceivedGroupInvitations(currentUserId: number) {
 					id: true,
 					name: true,
 					description: true,
+					projectName: true,
+					deadline: true,
+					isBonus: true,
 					createdAt: true,
 					owner: {
 						select: {
@@ -182,6 +302,48 @@ export async function getReceivedGroupInvitations(currentUserId: number) {
 							username: true,
 						},
 					},
+				},
+			},
+			invitedBy: {
+				select: {
+					id: true,
+					username: true,
+				},
+			},
+		},
+		orderBy: {
+			createdAt: "desc",
+		},
+	});
+}
+
+export async function getGroupInvitations(groupId: number, currentUserId: number) {
+	const group = await prisma.group.findUnique({
+		where: { id: groupId },
+		select: {
+			id: true,
+			ownerId: true,
+		},
+	});
+
+	if (!group) {
+		throw new ApiError(404, "Group not found");
+	}
+
+	if (group.ownerId !== currentUserId) {
+		throw new ApiError(403, "Only the group owner can view group invitations");
+	}
+
+	return prisma.groupInvitation.findMany({
+		where: { groupId },
+		select: {
+			id: true,
+			status: true,
+			createdAt: true,
+			invitedUser: {
+				select: {
+					id: true,
+					username: true,
 				},
 			},
 			invitedBy: {
@@ -242,11 +404,8 @@ export async function acceptGroupInvitation(invitationId: number, currentUserId:
 			},
 		});
 
-		await tx.groupInvitation.update({
+		await tx.groupInvitation.delete({
 			where: { id: invitationId },
-			data: {
-				status: "accepted",
-			},
 		});
 	});
 }
@@ -273,11 +432,44 @@ export async function rejectGroupInvitation(invitationId: number, currentUserId:
 		throw new ApiError(409, "This invitation is no longer pending");
 	}
 
-	await prisma.groupInvitation.update({
+	await prisma.groupInvitation.delete({
 		where: { id: invitationId },
-		data: {
-			status: "rejected",
+	});
+}
+
+export async function cancelGroupInvitation(invitationId: number, currentUserId: number) {
+	const invitation = await prisma.groupInvitation.findUnique({
+		where: { id: invitationId },
+		select: {
+			id: true,
+			status: true,
+			invitedById: true,
+			group: {
+				select: {
+					id: true,
+					ownerId: true,
+				},
+			},
 		},
+	});
+
+	if (!invitation) {
+		throw new ApiError(404, "Invitation not found");
+	}
+
+	if (invitation.status !== "pending") {
+		throw new ApiError(409, "Only pending invitations can be cancelled");
+	}
+
+	const isOwner = invitation.group.ownerId === currentUserId;
+	const isSender = invitation.invitedById === currentUserId;
+
+	if (!isOwner && !isSender) {
+		throw new ApiError(403, "You cannot cancel this invitation");
+	}
+
+	await prisma.groupInvitation.delete({
+		where: { id: invitationId },
 	});
 }
 
