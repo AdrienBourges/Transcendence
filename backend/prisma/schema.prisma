@@ -4,7 +4,7 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
 }
 
@@ -12,68 +12,155 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ProjectName {
+  MINISHELL
+  MINIRT
+  CUB3D
+  INCEPTION
+  IRC
+  WEBSERV
+  FT_TRANSCENDENCE
+}
+
 model User {
   id           Int      @id @default(autoincrement())
-  email        String?
-  username     String  @unique
+  email        String?  @unique
+  username     String   @unique
   passwordHash String?
   createdAt    DateTime @default(now())
   profile      Profile?
-  oauth42Id    String? @unique
+  oauth42Id    String?  @unique
   authProvider String   @default("local")
-  follows      Friendship[] @relation("userFriends")
-  followers    Friendship[] @relation("friendUsers")
+
+  ownedGroups  Group[]       @relation("OwnedGroups")
+  groupMembers GroupMember[]
+
+  sentGroupInvitations     GroupInvitation[] @relation("SentGroupInvitations")
+  receivedGroupInvitations GroupInvitation[] @relation("ReceivedGroupInvitations")
+
+  follows   Friendship[] @relation("userFriends")
+  followers Friendship[] @relation("friendUsers")
+
   conversations ConversationParticipant[]
   Messages      Message[]
+
+  projectRegistrations ProjectRegistration[]
 }
 
 model Profile {
-  id        Int     @id @default(autoincrement())
-  userId    Int     @unique
+  id     Int @id @default(autoincrement())
+  userId Int @unique
 
   avatarUrl String?
   languages String?
   discord   String?
   pronouns  String?
 
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProjectRegistration {
+  id          Int         @id @default(autoincrement())
+  userId      Int
+  projectName ProjectName
+  deadline    DateTime?   @db.Date
+  isBonus     Boolean     @default(false)
+  description String?
+  createdAt   DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectName])
+  @@index([isBonus])
+  @@index([deadline])
+  @@index([projectName, isBonus, deadline])
+}
+
+model Group {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String?
+  projectName ProjectName
+  deadline    DateTime?   @db.Date
+  isBonus     Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  ownerId     Int
+
+  owner       User              @relation("OwnedGroups", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  invitations GroupInvitation[]
+
+  @@index([projectName])
+  @@index([isBonus])
+  @@index([deadline])
+  @@index([projectName, isBonus, deadline])
+}
+
+model GroupMember {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  groupId  Int
+  role     String   @default("member")
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+model GroupInvitation {
+  id            Int      @id @default(autoincrement())
+  groupId       Int
+  invitedById   Int
+  invitedUserId Int
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+
+  group       Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invitedBy   User  @relation("SentGroupInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedUser User  @relation("ReceivedGroupInvitations", fields: [invitedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, invitedUserId])
 }
 
 model Friendship {
-  userId    Int
-  friendId  Int
-  @@id([userId, friendId]) 
-  user      User   @relation("userFriends", fields: [userId], references: [id], onDelete: Cascade)
-  friend    User   @relation("friendUsers", fields: [friendId], references: [id], onDelete: Cascade)
+  userId   Int
+  friendId Int
+  user     User @relation("userFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend   User @relation("friendUsers", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@id([userId, friendId])
 }
 
-model Conversation{
-  id          Int   @id @default(autoincrement())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  Messages    Message[]
-  ConvParticipants    ConversationParticipant[]
+model Conversation {
+  id               Int                       @id @default(autoincrement())
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  Messages         Message[]
+  ConvParticipants ConversationParticipant[]
 }
 
-model ConversationParticipant{
-  id          Int   @id @default(autoincrement())
-  convId      Int
-  userId      Int
-  Conv        Conversation  @relation(fields: [convId], references:[id], onDelete: Cascade)
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+model ConversationParticipant {
+  id     Int          @id @default(autoincrement())
+  convId Int
+  userId Int
+  Conv   Conversation @relation(fields: [convId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([convId, userId])
   @@index([userId])
 }
 
-model Message{
-  id        Int @id @default(autoincrement())
+model Message {
+  id        Int      @id @default(autoincrement())
   convId    Int
   senderId  Int
   content   String
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  conv      Conversation @relation(fields:[convId], references:[id], onDelete: Cascade)
-  sender        User    @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  conv   Conversation @relation(fields: [convId], references: [id], onDelete: Cascade)
+  sender User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([convId, createdAt])
 }

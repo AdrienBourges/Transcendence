@@ -86,3 +86,26 @@ export async function updateMe(
 
 	return user;
 }
+export async function searchUsersByUsername(username: string) {
+	return prisma.user.findMany({
+		where: {
+			username: {
+				contains: username,
+				mode: "insensitive",
+			},
+		},
+		select: {
+			id: true,
+			username: true,
+			profile: {
+				select: {
+					avatarUrl: true,
+				},
+			},
+		},
+		orderBy: {
+			username: "asc",
+		},
+		take: 10,
+	});
+}
