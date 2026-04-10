@@ -1,11 +1,30 @@
 import { Router } from "express";
-import { createGroup, createGroupInvitation, getGroupById, getMyGroups, getReceivedGroupInvitations, acceptGroupInvitation, rejectGroupInvitation, removeGroupMember, cancelGroupInvitation, getGroupInvitations, getGroupMembers, updateGroup, deleteGroup } from "../controllers/group.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
+import {
+	createGroup,
+	searchGroups,
+	createGroupInvitation,
+	getGroupById,
+	getMyGroups,
+	getReceivedGroupInvitations,
+	acceptGroupInvitation,
+	rejectGroupInvitation,
+	removeGroupMember,
+	cancelGroupInvitation,
+	getGroupInvitations,
+	getGroupMembers,
+	updateGroup,
+	deleteGroup,
+} from "../controllers/group.controller.js";import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { createGroupInvitationSchema, createGroupSchema, updateGroupSchema } from "../schemas/group.schema.js";
-
+import {
+	createGroupInvitationSchema,
+	createGroupSchema,
+	updateGroupSchema,
+	searchGroupsSchema,
+} from "../schemas/group.schema.js";
 const router = Router();
 
+router.get("/search", validate(searchGroupsSchema, "query"), searchGroups);
 router.post("/", authMiddleware, validate(createGroupSchema), createGroup);
 router.get("/me", authMiddleware, getMyGroups);
 
@@ -23,4 +42,6 @@ router.delete("/:id", authMiddleware, deleteGroup);
 router.delete("/:groupId/members/:userId", authMiddleware, removeGroupMember);
 router.get("/:id", getGroupById);
 
+
 export default router;
+

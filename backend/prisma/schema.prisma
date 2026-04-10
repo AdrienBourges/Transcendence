@@ -12,6 +12,15 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ProjectName {
+  MINISHELL
+  MINIRT
+  CUB3D
+  INCEPTION
+  IRC
+  WEBSERV
+  FT_TRANSCENDENCE
+}
 model User {
   id                        Int               @id @default(autoincrement())
   email                     String?           @unique
@@ -33,6 +42,8 @@ model User {
 
   conversations ConversationParticipant[]
   Messages      Message[]
+
+  projectRegistrations ProjectRegistration[]
 }
 
 model Profile {
@@ -47,19 +58,41 @@ model Profile {
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model ProjectRegistration {
+  id          Int         @id @default(autoincrement())
+  userId      Int
+  projectName ProjectName
+  deadline    DateTime?   @db.Date
+  isBonus     Boolean     @default(false)
+  description String?
+  createdAt   DateTime    @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectName])
+  @@index([isBonus])
+  @@index([deadline])
+  @@index([projectName, isBonus, deadline])
+}
+
 model Group {
   id          Int           @id @default(autoincrement())
   name        String
   description String?
-  projectName String		
-  deadline	  DateTime?
-  isBonus	  Boolean		@default(false)
+  projectName ProjectName
+  deadline    DateTime?     @db.Date
+  isBonus     Boolean       @default(false)
   createdAt   DateTime      @default(now())
   ownerId     Int
 
   owner       User          @relation("OwnedGroups", fields: [ownerId], references: [id], onDelete: Cascade)
   members     GroupMember[]
   invitations GroupInvitation[]
+
+  @@index([projectName])
+  @@index([isBonus])
+  @@index([deadline])
+  @@index([projectName, isBonus, deadline])
 }
 
 model GroupMember {
@@ -93,7 +126,7 @@ model GroupInvitation {
 model Friendship {
   userId    Int
   friendId  Int
-  @@id([userId, friendId]) 
+  @@id([userId, friendId])
   user      User   @relation("userFriends", fields: [userId], references: [id], onDelete: Cascade)
   friend    User   @relation("friendUsers", fields: [friendId], references: [id], onDelete: Cascade)
 }

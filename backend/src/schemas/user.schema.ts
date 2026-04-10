@@ -6,3 +6,7 @@ export const updateMeSchema = z.object({
 	discord: z.string().max(50).optional(),
 	pronouns: z.string().max(50).optional(),
 });
+
+export const searchUsersSchema = z.object({
+	username: z.string().trim().min(1).max(50),
+}).strict();

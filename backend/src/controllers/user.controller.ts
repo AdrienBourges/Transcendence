@@ -37,3 +37,14 @@ export async function updateMe(req: Request, res: Response) {
 
 	return res.json(user);
 }
+
+export async function searchUsers(req: Request, res: Response) {
+	const { username } = req.query;
+
+	if (typeof username !== "string") {
+		throw new ApiError(400, "Invalid username query");
+	}
+
+	const users = await userService.searchUsersByUsername(username);
+	return res.json(users);
+}

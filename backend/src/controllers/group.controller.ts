@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { ApiError } from "../utils/ApiError.js";
 import * as groupService from "../services/group.service.js";
+import { ProjectName } from "@prisma/client";
 
 export async function createGroup(req: Request, res: Response) {
 	if (!req.user) {
@@ -9,6 +10,32 @@ export async function createGroup(req: Request, res: Response) {
 
 	const group = await groupService.createGroup(req.user.id, req.body);
 	return res.status(201).json(group);
+}
+
+export async function searchGroups(req: Request, res: Response) {
+	const { projectName, isBonus, maxDeadline } = req.query;
+
+	const filters: {
+		projectName?: ProjectName;
+		isBonus?: "true" | "false";
+		maxDeadline?: string;
+	} = {};
+
+	if (typeof projectName === "string") {
+		filters.projectName = projectName as ProjectName;
+	}
+
+	if (typeof isBonus === "string") {
+		filters.isBonus = isBonus as "true" | "false";
+	}
+
+	if (typeof maxDeadline === "string") {
+		filters.maxDeadline = maxDeadline;
+	}
+
+	const groups = await groupService.searchGroups(filters);
+
+	return res.json(groups);
 }
 
 export async function getGroupById(req: Request, res: Response) {

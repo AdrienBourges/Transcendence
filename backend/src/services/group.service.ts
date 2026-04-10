@@ -1,10 +1,11 @@
 import prisma from "../prisma.js";
 import { ApiError } from "../utils/ApiError.js";
+import { Prisma, ProjectName } from "@prisma/client";
 
 type CreateGroupInput = {
 	name: string;
 	description?: string;
-	projectName: string;
+	projectName: ProjectName;
 	deadline?: string;
 	isBonus?: boolean;
 };
@@ -12,21 +13,37 @@ type CreateGroupInput = {
 type UpdateGroupInput = {
 	name?: string;
 	description?: string | null;
-	projectName?: string;
+	projectName?: ProjectName;
 	deadline?: string | null;
 	isBonus?: boolean;
 };
+
+type SearchGroupsInput = {
+	projectName?: ProjectName;
+	isBonus?: "true" | "false";
+	maxDeadline?: string;
+};
+
+function parseDeadline(value?: string | null): Date | null | undefined {
+	if (value === undefined) return undefined;
+	if (value === null || value === "") return null;
+	return new Date(value);
+}
 
 export async function createGroup(ownerId: number, data: CreateGroupInput) {
 	return prisma.$transaction(async (tx) => {
 		const group = await tx.group.create({
 			data: {
 				name: data.name,
-				description: data.description,
 				projectName: data.projectName,
-				deadline: data.deadline ? new Date(data.deadline) : null,
 				isBonus: data.isBonus ?? false,
 				ownerId,
+				...(data.description !== undefined && {
+					description: data.description,
+				}),
+				...(data.deadline !== undefined && {
+					deadline: data.deadline === "" ? null : new Date(data.deadline),
+				}),
 			},
 		});
 
@@ -39,6 +56,60 @@ export async function createGroup(ownerId: number, data: CreateGroupInput) {
 		});
 
 		return group;
+	});
+}
+
+export async function searchGroups(filters: SearchGroupsInput) {
+	const where: Prisma.GroupWhereInput = {};
+
+	if (filters.projectName !== undefined) {
+		where.projectName = filters.projectName;
+	}
+
+	if (filters.isBonus === "true") {
+		where.isBonus = true;
+	} else if (filters.isBonus === "false") {
+		where.isBonus = false;
+	}
+
+	if (filters.maxDeadline !== undefined) {
+		where.deadline = {
+			lte: new Date(filters.maxDeadline),
+		};
+	}
+
+	return prisma.group.findMany({
+		where,
+		select: {
+			id: true,
+			name: true,
+			description: true,
+			projectName: true,
+			deadline: true,
+			isBonus: true,
+			createdAt: true,
+			owner: {
+				select: {
+					id: true,
+					username: true,
+					profile: {
+						select: {
+							avatarUrl: true,
+						},
+					},
+				},
+			},
+			members: {
+				select: {
+					id: true,
+					userId: true,
+					role: true,
+				},
+			},
+		},
+		orderBy: {
+			createdAt: "desc",
+		},
 	});
 }
 
@@ -131,17 +202,34 @@ export async function updateGroup(groupId: number, currentUserId: number, data: 
 		throw new ApiError(403, "Only the group owner can update this group");
 	}
 
+	const updateData: Prisma.GroupUpdateInput = {};
+
+	if (data.name !== undefined) {
+		updateData.name = data.name;
+	}
+
+	if (data.description !== undefined) {
+		updateData.description = data.description;
+	}
+
+	if (data.projectName !== undefined) {
+		updateData.projectName = data.projectName;
+	}
+
+	if (data.deadline !== undefined) {
+		updateData.deadline =
+			data.deadline === "" || data.deadline === null
+				? null
+				: new Date(data.deadline);
+	}
+
+	if (data.isBonus !== undefined) {
+		updateData.isBonus = data.isBonus;
+	}
+
 	return prisma.group.update({
 		where: { id: groupId },
-		data: {
-			...(data.name !== undefined && { name: data.name }),
-			...(data.description !== undefined && { description: data.description }),
-			...(data.projectName !== undefined && { projectName: data.projectName }),
-			...(data.deadline !== undefined && {
-				deadline: data.deadline ? new Date(data.deadline) : null,
-			}),
-			...(data.isBonus !== undefined && { isBonus: data.isBonus }),
-		},
+		data: updateData,
 		select: {
 			id: true,
 			name: true,
