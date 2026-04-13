@@ -5,7 +5,7 @@ import type { SignupInput } from '@/types/auth';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  
+
   /**
    * 1. Form state management
    */
@@ -16,7 +16,7 @@ const RegisterPage: React.FC = () => {
   });
 
   /**
-   * 2. Error state (corresponds to backend ApiErrorResponse)
+   * 2. Error state
    */
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,7 @@ const RegisterPage: React.FC = () => {
    */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (error) setError(null); // Clear error message while typing
+    if (error) setError(null);
   };
 
   /**
@@ -38,16 +38,13 @@ const RegisterPage: React.FC = () => {
     setError(null);
 
     try {
-      // Call the register method from api.ts
       await authApi.register(formData);
-      
-      // Success: redirect to login page after successful registration
       console.log("Registration successful!");
       navigate('/login');
     } catch (err: any) {
-      // Error: handle backend response errors (e.g. 400 or 409)
-      // Expected format: { "error": "Email already in use" }
-      const serverMessage = err.response?.data?.error || "Registration failed. Please try again.";
+      const serverMessage =
+        err.response?.data?.error ||
+        "Registration failed. Please try again.";
       setError(serverMessage);
     } finally {
       setLoading(false);
@@ -55,20 +52,47 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="register-container">
-      <h2>Create an Account</h2>
-      
-      {/* Error display area */}
+    <div
+      className="register-container"
+      style={{
+        color: "#e6f0ff",
+        backgroundColor: "#121212",
+        minHeight: "100vh",
+        padding: "40px",
+      }}
+    >
+      <h2 style={{ color: "#ffffff", marginBottom: "20px" }}>
+        Create an Account
+      </h2>
+
       {error && (
-        <div style={{ color: 'red', marginBottom: '1rem', fontWeight: 'bold' }}>
+        <div
+          style={{
+            color: "#ff6b6b",
+            marginBottom: "1rem",
+            fontWeight: "bold",
+          }}
+        >
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Username</label>
+      <form
+        onSubmit={handleSubmit}
+        style={{ maxWidth: "400px" }}
+      >
+        <div className="form-group" style={{ marginBottom: "15px" }}>
+          <label style={{ color: "#cce0ff" }}>Username</label>
           <input
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginTop: "5px",
+              backgroundColor: "#1e1e1e",
+              color: "#ffffff",
+              border: "1px solid #555",
+              borderRadius: "5px",
+            }}
             type="text"
             name="username"
             value={formData.username}
@@ -78,9 +102,18 @@ const RegisterPage: React.FC = () => {
           />
         </div>
 
-        <div className="form-group">
-          <label>Email</label>
+        <div className="form-group" style={{ marginBottom: "15px" }}>
+          <label style={{ color: "#cce0ff" }}>Email</label>
           <input
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginTop: "5px",
+              backgroundColor: "#1e1e1e",
+              color: "#ffffff",
+              border: "1px solid #555",
+              borderRadius: "5px",
+            }}
             type="email"
             name="email"
             value={formData.email}
@@ -90,9 +123,18 @@ const RegisterPage: React.FC = () => {
           />
         </div>
 
-        <div className="form-group">
-          <label>Password</label>
+        <div className="form-group" style={{ marginBottom: "15px" }}>
+          <label style={{ color: "#cce0ff" }}>Password</label>
           <input
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginTop: "5px",
+              backgroundColor: "#1e1e1e",
+              color: "#ffffff",
+              border: "1px solid #555",
+              borderRadius: "5px",
+            }}
             type="password"
             name="password"
             value={formData.password}
@@ -102,13 +144,29 @@ const RegisterPage: React.FC = () => {
           />
         </div>
 
-        <button type="submit" disabled={loading}>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            backgroundColor: "#4da6ff",
+            color: "#fff",
+            border: "none",
+            padding: "12px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
           {loading ? 'Creating Account...' : 'Sign Up'}
         </button>
       </form>
 
-      <p>
-        Already have an account? <Link to="/login">Login here</Link>
+      <p style={{ marginTop: "20px", color: "#cce0ff" }}>
+        Already have an account?{" "}
+        <Link to="/login" style={{ color: "#66b3ff" }}>
+          Login here
+        </Link>
       </p>
     </div>
   );

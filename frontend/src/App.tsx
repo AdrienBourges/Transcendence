@@ -10,7 +10,9 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ProfilePage from '@/pages/ProfilePage';
 import ChatPage from '@/pages/ChatPage';
+import GroupsPage from '@/pages/GroupsPage';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
+import GroupDetailPage from './pages/GroupDetailPage';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -70,6 +72,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/profile/:id?" element={<ProfilePage />} />
+          <Route path="/groups/:id" element={<GroupDetailPage />} />
         </Route>
 
         {/* --- 404 Route (Styled for the 42 Transcendence theme) --- */}

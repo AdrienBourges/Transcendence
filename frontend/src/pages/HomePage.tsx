@@ -2,11 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useChatStore } from '@/store/useChatStore';
 import { AUTH_TOKEN_KEY } from '@/utils/constants';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import ChatPage from './ChatPage';
+import GroupsPage from './GroupsPage';
 
 const HomePage: React.FC = () => {
   const { user } = useAuthStore();
+  const location = useLocation();
   
   const { 
     hasNotification, 
@@ -28,8 +31,8 @@ const HomePage: React.FC = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [friendsList, setFriendsList] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
-  
   const [activeChatUser, setActiveChatUser] = useState<any | null>(null);
+  const [unreadInvites, setUnreadInvites] = useState(0); 
 
   const searchRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -38,7 +41,98 @@ const HomePage: React.FC = () => {
   const BABY_BLUE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23A2D2FF'/%3E%3C/svg%3E";
 
   /**
-   * Close dropdown menus/search bar when clicking outside
+   * Deep notification fetch logic (Fixed undefined ID error)
+   * 1. Fetch invitations I received (as a member)
+   * 2. Fetch the latest status of all groups I manage (as an Owner)
+   */
+  const fetchAllNotifications = useCallback(async () => {
+    // Basic security check: if user is not logged in or ID is not fetched, return immediately
+    if (!user?.id) return;
+
+    try {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      // Interaction optimization: if currently on the Team page, force clear red dot status and stop counting
+      if (activeSection === 'groups') {
+        setUnreadInvites(0);
+        return;
+      }
+
+      let totalNotifications = 0;
+
+      // --- Logic A: Invitations received as a [Member] ---
+      // Endpoint: GET /groups/invitations/received
+      const receivedRes = await axios.get(`${BACKEND_URL}/api/groups/invitations/received`, config);
+      const receivedData = Array.isArray(receivedRes.data) ? receivedRes.data : [];
+      
+      const memberPending = receivedData.filter((inv: any) => 
+        inv.status === 'PENDING' || inv.status === 'pending'
+      );
+      totalNotifications += memberPending.length;
+
+      // --- Logic B: Check outgoing invitations as an [Owner] ---
+      // 1. Get all groups I created (Endpoint: GET /groups/me)
+      const myGroupsRes = await axios.get(`${BACKEND_URL}/api/groups/me`, config);
+      const myGroups = Array.isArray(myGroupsRes.data) ? myGroupsRes.data : [];
+
+      // 2. Concurrently check the invitation list for each group
+      const ownerNotifications = await Promise.all(myGroups.map(async (group: any) => {
+        // Safety guard: if group is null or has no id, skip request to prevent /api/groups/undefined/invitations
+        if (!group || !group.id) {
+          return 0;
+        }
+
+        try {
+          // Endpoint: GET /groups/:id/invitations
+          const invRes = await axios.get(`${BACKEND_URL}/api/groups/${group.id}/invitations`, config);
+          const invitations = Array.isArray(invRes.data) ? invRes.data : [];
+          
+          // Count invitations with PENDING status within this group
+          return invitations.filter((i: any) => i.status === 'PENDING' || i.status === 'pending').length;
+        } catch (e) {
+          // Failure of a single group request (e.g., 403 or 404) should not block global notification counting
+          console.error(`Failed to fetch invitations for group ${group.id}:`, e);
+          return 0;
+        }
+      }));
+
+      // Accumulate pending notifications from all groups
+      const totalOwnerPending = ownerNotifications.reduce((a, b) => a + b, 0);
+      totalNotifications += totalOwnerPending;
+
+      // Update global red dot status
+      setUnreadInvites(totalNotifications);
+
+    } catch (err) {
+      // Catch global errors caused by network exceptions or API structure changes
+      console.error("NOTIFICATION_FETCH_ERROR_LOG:", err);
+    }
+  }, [user?.id, activeSection]);
+
+  /**
+   * Switch Section and clear red dot
+   */
+  const handleSwitchSection = (section: 'dashboard' | 'messages' | 'groups') => {
+    setActiveSection(section);
+    if (section === 'groups') {
+      setUnreadInvites(0);
+    }
+  };
+
+  /**
+   * URL Parameter Synchronization
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+    if (section === 'groups') {
+      handleSwitchSection('groups');
+    }
+  }, [location.search]);
+
+  /**
+   * Click outside to close menus
    */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -49,9 +143,6 @@ const HomePage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  /**
-   * Sorting logic
-   */
   const sortConversations = (list: any[]) => {
     return [...list].sort((a: any, b: any) => {
       const timeA = a.lastMessage?.createdAt ?? a.updatedAt;
@@ -60,9 +151,6 @@ const HomePage: React.FC = () => {
     });
   };
 
-  /**
-   * Fetch friends list
-   */
   const fetchFriends = useCallback(async () => {
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -73,9 +161,6 @@ const HomePage: React.FC = () => {
     } catch (err) { console.error("FETCH_FRIENDS_ERROR", err); }
   }, []);
 
-  /**
-   * Fetch conversation list (including message completion patch)
-   */
   const fetchConversations = useCallback(async () => {
     if (!user?.id) return;
     try {
@@ -107,9 +192,6 @@ const HomePage: React.FC = () => {
     } catch (err) { console.error("FETCH_CONVERSATIONS_ERROR", err); }
   }, [user?.id, joinConversations]);
 
-  /**
-   * Add friend
-   */
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery) return;
@@ -124,9 +206,6 @@ const HomePage: React.FC = () => {
     } catch (err) { alert("LINK_FAILED: Node not found."); }
   };
 
-  /**
-   * Remove friend
-   */
   const handleRemoveFriend = async (friendId: number) => {
     if (!window.confirm("TERMINATE_LINK_WITH_NODE?")) return;
     try {
@@ -139,7 +218,7 @@ const HomePage: React.FC = () => {
   };
 
   /**
-   * Socket real-time listener
+   * Sockets Listeners
    */
   useEffect(() => {
     if (sockets.size === 0) return;
@@ -161,20 +240,25 @@ const HomePage: React.FC = () => {
     };
   }, [sockets]);
 
+  /**
+   * Initialization and Polling
+   */
   useEffect(() => {
     if (user?.id) {
       fetchConversations();
       fetchFriends();
+      fetchAllNotifications();
     }
-  }, [user?.id, fetchConversations, fetchFriends]);
+  }, [user?.id, fetchConversations, fetchFriends, fetchAllNotifications]);
 
   useEffect(() => {
     if (!user?.id) return;
     const interval = setInterval(() => {
       fetchConversations();
+      fetchAllNotifications();
     }, 10000);
     return () => clearInterval(interval);
-  }, [user?.id, fetchConversations]);
+  }, [user?.id, activeSection, fetchConversations, fetchAllNotifications]);
 
   const handleOpenChat = (conv: any) => {
     setActiveChatId(conv.id.toString());
@@ -206,59 +290,35 @@ const HomePage: React.FC = () => {
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #050505; color: #ffffff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        
         .hp-nav { position: fixed; top: 0; left: 0; right: 0; height: 55px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; background: rgba(0,0,0,0.9); border-bottom: 1px solid #222; z-index: 1000; backdrop-filter: blur(10px); }
         .hp-nav-logo { font-family: 'JetBrains Mono'; font-weight: 700; font-size: 0.85rem; color: #A2D2FF; letter-spacing: 1px; }
         .hp-nav-links { display: flex; gap: 0.5rem; position: absolute; left: 50%; transform: translateX(-50%); }
         .hp-nav-btn { background: none; border: none; padding: 0.4rem 1rem; font-size: 0.7rem; color: #666; cursor: pointer; font-family: 'JetBrains Mono'; transition: 0.2s; position: relative; }
         .hp-nav-btn:hover { color: #fff; }
         .hp-nav-btn.active { color: #A2D2FF; background: #111; border-radius: 2px; }
-
-        /* SEARCH */
-        .hp-search-container {
-          display: flex; align-items: center; background: #111; border: 1px solid #333;
-          border-radius: 4px; padding: 2px 8px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          overflow: hidden; width: ${isSearchOpen ? '200px' : '34px'};
-        }
-        .hp-search-input {
-          background: transparent; border: none; color: #fff; font-family: 'JetBrains Mono';
-          font-size: 0.7rem; width: 100%; padding-left: 8px; outline: none;
-          opacity: ${isSearchOpen ? 1 : 0};
-        }
-
+        .hp-search-container { display: flex; align-items: center; background: #111; border: 1px solid #333; border-radius: 4px; padding: 2px 8px; transition: all 0.3s ease; overflow: hidden; width: ${isSearchOpen ? '200px' : '34px'}; }
+        .hp-search-input { background: transparent; border: none; color: #fff; font-family: 'JetBrains Mono'; font-size: 0.7rem; width: 100%; padding-left: 8px; outline: none; opacity: ${isSearchOpen ? 1 : 0}; }
         .notif-dot { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; background: #ff4d4d; border-radius: 50%; box-shadow: 0 0 8px #ff4d4d; z-index: 10; }
-
         .hp-main { padding: 100px 1.5rem 2rem; max-width: 900px; margin: auto; }
         .hp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
-        .hp-stat-box { background: #080808; border: 1px solid #1a1a1a; padding: 1.2rem; border-radius: 4px; text-align: center; transition: 0.2s; }
+        .hp-stat-box { background: #080808; border: 1px solid #1a1a1a; padding: 1.2rem; border-radius: 4px; text-align: center; }
         .hp-stat-box.clickable:hover { border-color: #A2D2FF; cursor: pointer; }
         .hp-stat-val { font-family: 'JetBrains Mono'; font-size: 1.2rem; color: #fff; }
         .hp-stat-label { font-size: 0.6rem; color: #555; text-transform: uppercase; margin-top: 6px; font-weight: 700; }
-
         .mail-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        .mail-item { background: #080808; border: 1px solid #1a1a1a; padding: 1rem; border-radius: 4px; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: 0.2s; }
-        .mail-item:hover { border-color: #A2D2FF; background: #0c0c0c; }
+        .mail-item { background: #080808; border: 1px solid #1a1a1a; padding: 1rem; border-radius: 4px; display: flex; align-items: center; gap: 1rem; cursor: pointer; }
+        .mail-item:hover { border-color: #A2D2FF; }
         .mail-avatar { width: 42px; height: 42px; border-radius: 2px; border: 1px solid #333; object-fit: cover; }
-        .mail-info { flex: 1; min-width: 0; }
         .mail-user { font-family: 'JetBrains Mono'; font-size: 0.85rem; color: #fff; }
-        .mail-preview { font-size: 0.7rem; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-
-        /* FRIENDS MODAL */
-        .friends-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .friends-modal { background: #0a0a0a; border: 1px solid #333; width: 360px; padding: 1.5rem; border-radius: 4px; position: relative; }
+        .mail-preview { font-size: 0.7rem; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .friends-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .friends-modal { background: #0a0a0a; border: 1px solid #333; width: 360px; padding: 1.5rem; border-radius: 4px; }
         .friend-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #111; }
-        .friend-node-info { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
-        .friend-avatar { width: 32px; height: 32px; border-radius: 2px; border: 1px solid #333; object-fit: cover; }
-        .btn-terminate { background: none; border: 1px solid #300; color: #511; font-family: 'JetBrains Mono'; font-size: 0.5rem; padding: 2px 5px; cursor: pointer; }
-        .btn-terminate:hover { border-color: #f55; color: #f55; }
-
-        .chat-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .chat-window { background: #0a0a0a; border: 1px solid #333; width: 450px; height: 600px; border-radius: 4px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden; }
-        
+        .chat-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .chat-window { background: #0a0a0a; border: 1px solid #333; width: 450px; height: 600px; border-radius: 4px; overflow: hidden; }
         .hp-dropdown { position: absolute; top: 45px; right: 0; width: 180px; background: #0a0a0a; border: 1px solid #333; padding: 5px; border-radius: 4px; z-index: 1001; }
         .hp-dropdown-item { width: 100%; padding: 10px; background: none; border: none; color: #eee; text-align: left; font-size: 0.7rem; cursor: pointer; font-family: 'JetBrains Mono'; }
-        .hp-dropdown-item:hover { background: #111; color: #A2D2FF; }
-
+        .hp-dropdown-item:hover { color: #A2D2FF; background: #111; }
         .hp-label { font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #A2D2FF; text-transform: uppercase; }
       `}</style>
 
@@ -267,16 +327,18 @@ const HomePage: React.FC = () => {
           <div className="hp-nav-logo">42_TRANSCENDENCE</div>
           
           <div className="hp-nav-links">
-            <button className={`hp-nav-btn ${activeSection === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveSection('dashboard')}>[DASHBOARD]</button>
-            <button className={`hp-nav-btn ${activeSection === 'messages' ? 'active' : ''}`} onClick={() => setActiveSection('messages')}>
+            <button className={`hp-nav-btn ${activeSection === 'dashboard' ? 'active' : ''}`} onClick={() => handleSwitchSection('dashboard')}>[DASHBOARD]</button>
+            <button className={`hp-nav-btn ${activeSection === 'messages' ? 'active' : ''}`} onClick={() => handleSwitchSection('messages')}>
               [MAIL]
               {hasNotification && <div className="notif-dot" />}
             </button>
-            <button className={`hp-nav-btn ${activeSection === 'groups' ? 'active' : ''}`} onClick={() => setActiveSection('groups')}>[TEAM]</button>
+            <button className={`hp-nav-btn ${activeSection === 'groups' ? 'active' : ''}`} onClick={() => handleSwitchSection('groups')}>
+              [TEAM]
+              {unreadInvites > 0 && <div className="notif-dot" />}
+            </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-            {/* Search Bar */}
             <div className="hp-search-container" ref={searchRef}>
               <button onClick={() => setIsSearchOpen(!isSearchOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -318,7 +380,6 @@ const HomePage: React.FC = () => {
                   <div className="hp-stat-val">{String(conversations?.length || 0).padStart(2, '0')}</div>
                   <div className="hp-stat-label">Active_Links</div>
                 </div>
-                {/* RESTORED: Click Friend_Nodes to open friends list */}
                 <div className="hp-stat-box clickable" onClick={() => setFriendsOpen(true)}>
                   <div className="hp-stat-val" style={{ color: '#A2D2FF' }}>{String(friendsList?.length || 0).padStart(2, '0')}</div>
                   <div className="hp-stat-label">Friend_Nodes</div>
@@ -344,22 +405,12 @@ const HomePage: React.FC = () => {
             <div className="hp-mail-section">
               <div className="hp-label">INBOUND_COMMUNICATIONS</div>
               <div className="mail-list">
-                {conversations && conversations.length > 0 ? conversations.map(conv => (
+                {conversations.length > 0 ? conversations.map(conv => (
                   <div key={conv.id} className="mail-item" onClick={() => handleOpenChat(conv)}>
-                    <img 
-                      src={getAvatarUrl(conv.otherUser.profile?.avatarUrl)} 
-                      className="mail-avatar" alt="avatar"
-                      onError={(e) => {(e.target as HTMLImageElement).src = BABY_BLUE_SVG}}
-                    />
-                    <div className="mail-info">
+                    <img src={getAvatarUrl(conv.otherUser.profile?.avatarUrl)} className="mail-avatar" alt="avatar" onError={(e) => {(e.target as HTMLImageElement).src = BABY_BLUE_SVG}} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="mail-user">{conv.otherUser?.username}</div>
-                      <div className="mail-preview">
-                        {conv.lastMessage?.content
-                          ? (conv.lastMessage.content.length > 30 
-                              ? conv.lastMessage.content.slice(0, 30) + '...' 
-                              : conv.lastMessage.content)
-                          : "CONNECTION_SECURED"}
-                      </div>
+                      <div className="mail-preview">{conv.lastMessage?.content || "CONNECTION_SECURED"}</div>
                     </div>
                   </div>
                 )) : (
@@ -368,9 +419,16 @@ const HomePage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {activeSection === 'groups' && (
+            <div className="hp-groups-section">
+              <div className="hp-label" style={{ marginBottom: '20px' }}>NETWORK_CLUSTERS</div>
+              <GroupsPage />
+            </div>
+          )}
         </div>
 
-        {/* Friends List Modal */}
+        {/* Friends Overlay */}
         {friendsOpen && (
           <div className="friends-overlay" onClick={() => setFriendsOpen(false)}>
             <div className="friends-modal" onClick={e => e.stopPropagation()}>
@@ -381,18 +439,16 @@ const HomePage: React.FC = () => {
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 {friendsList.length > 0 ? friendsList.map(f => (
                   <div key={f.id} className="friend-item">
-                    <div className="friend-node-info" onClick={() => window.location.href = `/profile/${f.id}`}>
-                      <img className="friend-avatar" src={getAvatarUrl(f.profile?.avatarUrl)} onError={(e) => {(e.target as HTMLImageElement).src = BABY_BLUE_SVG}} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, cursor: 'pointer' }} onClick={() => window.location.href = `/profile/${f.id}`}>
+                      <img className="mail-avatar" style={{ width: '32px', height: '32px' }} src={getAvatarUrl(f.profile?.avatarUrl)} onError={(e) => {(e.target as HTMLImageElement).src = BABY_BLUE_SVG}} />
                       <div>
                         <div style={{ fontSize: '0.8rem', color: '#eee', fontFamily: 'JetBrains Mono' }}>{f.username}</div>
                         <div style={{ fontSize: '0.6rem', color: '#444' }}>NODE_0{f.id}</div>
                       </div>
                     </div>
-                    <button className="btn-terminate" onClick={() => handleRemoveFriend(f.id)}>[TERMINATE]</button>
+                    <button className="btn-terminate" style={{ background: 'none', border: '1px solid #300', color: '#511', fontSize: '0.5rem', padding: '2px 5px', cursor: 'pointer' }} onClick={() => handleRemoveFriend(f.id)}>[TERMINATE]</button>
                   </div>
-                )) : (
-                  <div style={{ textAlign: 'center', color: '#333', fontSize: '0.7rem', padding: '20px' }}>NO_LINKED_NODES</div>
-                )}
+                )) : ( <div style={{ textAlign: 'center', color: '#333', fontSize: '0.7rem', padding: '20px' }}>NO_LINKED_NODES</div> )}
               </div>
             </div>
           </div>
@@ -402,11 +458,7 @@ const HomePage: React.FC = () => {
         {activeChatId && (
           <div className="chat-overlay" onClick={handleCloseChat}>
             <div className="chat-window" onClick={e => e.stopPropagation()}>
-              <ChatPage 
-                conversationId={activeChatId} 
-                onClose={handleCloseChat} 
-                otherUser={activeChatUser}
-              />
+              <ChatPage conversationId={activeChatId} onClose={handleCloseChat} otherUser={activeChatUser} />
             </div>
           </div>
         )}
