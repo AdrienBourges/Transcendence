@@ -13,6 +13,8 @@ import ChatPage from '@/pages/ChatPage';
 import GroupsPage from '@/pages/GroupsPage';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import GroupDetailPage from './pages/GroupDetailPage';
+import TeammateFinderPage from './pages/TeammateFinderPage';
+import SearchPage from '@/pages/SearchPage';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -73,6 +75,8 @@ function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/profile/:id?" element={<ProfilePage />} />
           <Route path="/groups/:id" element={<GroupDetailPage />} />
+          <Route path="/teammate-finder" element={<TeammateFinderPage />} />
+          <Route path="/search" element={<SearchPage />} />
         </Route>
 
         {/* --- 404 Route (Styled for the 42 Transcendence theme) --- */}

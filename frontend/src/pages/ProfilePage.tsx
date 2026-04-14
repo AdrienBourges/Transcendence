@@ -79,17 +79,14 @@ const ProfilePage = () => {
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       
-      // Get or create the private conversation
       const convRes = await axios.post(`${BACKEND_URL}/api/conversations/private/${id}`, 
         {}, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const curId = Number(convRes.data.id);
 
-      // Join socket room for this conversation
       joinConversations([curId]);
 
-      // Set chat context — same pattern as HomePage
       setActiveChatId(curId.toString());
       setActiveChatUser({ id: Number(id), username: targetUser?.username });
       setActiveConv(curId);
@@ -177,7 +174,24 @@ const ProfilePage = () => {
             <img src={avatarSrc} style={{ width: '100px', height: '100px', borderRadius: '4px', border: '1px solid #333', objectFit: 'cover' }} alt="Avatar" />
             <div>
               <div className="hp-label">{isOwnProfile ? "OWNER_ID" : "REMOTE_ENTITY"}</div>
-              <h2 style={{ fontFamily: 'JetBrains Mono', fontSize: '1.8rem', margin: '5px 0' }}>{targetUser?.username}</h2>
+              
+              {/* Display username */}
+              <h2 style={{ fontFamily: 'JetBrains Mono', fontSize: '1.8rem', margin: '5px 0' }}>
+                {targetUser?.username}
+              </h2>
+
+              {/* Display user ID (visible to everyone) */}
+              <div style={{ 
+                fontFamily: 'JetBrains Mono', 
+                fontSize: '0.8rem', 
+                color: '#666', 
+                marginTop: '-5px',
+                marginBottom: '10px' 
+              }}>
+                <span style={{ color: '#A2D2FF' }}>UID_</span>
+                {targetUser?.id?.toString().padStart(4, '0')} 
+              </div>
+
               {!isOwnProfile && (
                 <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
                   <button className="hp-btn-outline" style={{ width: 'auto', padding: '6px 16px', borderColor: '#A2D2FF', color: '#A2D2FF' }} onClick={handleOpenChat}>
@@ -213,6 +227,13 @@ const ProfilePage = () => {
             <main className="hp-card">
               <span className="hp-label">Data_Field</span>
               <div style={{ marginTop: '20px', fontFamily: 'JetBrains Mono' }}>
+
+                {/* Display system unique identifier in data section */}
+                <p style={{ color: '#A2D2FF', fontSize: '0.7rem' }}>NODE_ID:</p>
+                <p style={{ marginBottom: '20px', color: '#fff' }}>
+                  #{targetUser?.id}
+                </p>
+
                 <p style={{ color: '#A2D2FF', fontSize: '0.7rem' }}>DISCORD:</p>
                 {isEditing ? (
                   <input className="hp-input" value={discord} onChange={(e) => setDiscord(e.target.value)} />
