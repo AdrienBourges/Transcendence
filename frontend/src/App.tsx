@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useChatStore } from '@/store/useChatStore'; 
+import { useChatStore } from '@/store/useChatStore';
 import { ProtectedRoute, PublicRoute } from '@/components/ProtectedRoute';
 
 // --- Pages ---
@@ -10,7 +10,7 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ProfilePage from '@/pages/ProfilePage';
 import ChatPage from '@/pages/ChatPage';
-import GroupsPage from '@/pages/GroupsPage';
+//import GroupsPage from '@/pages/GroupsPage';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import GroupDetailPage from './pages/GroupDetailPage';
 import TeammateFinderPage from './pages/TeammateFinderPage';
@@ -19,7 +19,7 @@ import SearchPage from '@/pages/SearchPage';
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const user = useAuthStore((state) => state.user);
-  
+
   /**
    * Session Management:
    * Destroy all active Socket instances when the user logs out or the app unmounts.
@@ -35,14 +35,14 @@ function App() {
   /**
    * Global Socket Cleanup:
    * 1. If user becomes null (Logout), clear all socket links.
-   * 2. When App component unmounts, perform a thorough cleanup to prevent 
+   * 2. When App component unmounts, perform a thorough cleanup to prevent
    * duplicate connections during hot updates in development.
    */
   useEffect(() => {
     if (!user) {
       disconnectAll();
     }
-    
+
     return () => {
       disconnectAll();
     };
@@ -51,9 +51,9 @@ function App() {
   /**
    * NOTE ON LOADING STATE:
    * We no longer return the full-screen loader here at the top level.
-   * By wrapping everything in BrowserRouter immediately, we allow 
+   * By wrapping everything in BrowserRouter immediately, we allow
    * ProtectedRoute to handle the 'isLoading' state internally.
-   * This prevents "ghost" renders where HomePage might try to load 
+   * This prevents "ghost" renders where HomePage might try to load
    * with empty user data (showing ID: 0) before checkAuth finishes.
    */
 

@@ -26,7 +26,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversationId: propsId, onClose, o
     const [isPartnerOnline, setIsPartnerOnline] = useState<boolean>(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
-    const BACKEND_URL = 'http://localhost:3000';
+    const BACKEND_URL = '';
 
     // Auto-scroll to bottom on new messages
     useEffect(() => {

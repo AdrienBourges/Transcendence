@@ -35,13 +35,13 @@ const GroupDetailPage: React.FC = () => {
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]); 
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const BACKEND_URL = 'http://localhost:3000';
+  const BACKEND_URL = '';
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
@@ -68,7 +68,7 @@ const GroupDetailPage: React.FC = () => {
 
       if (Number(me?.id) === Number(groupRes.data.owner?.id)) {
         const invRes = await axios.get(`${BACKEND_URL}/api/groups/${id}/invitations`, config);
-        const pendingInvs = Array.isArray(invRes.data) 
+        const pendingInvs = Array.isArray(invRes.data)
           ? invRes.data.filter((inv: any) => inv.status.toUpperCase() === 'PENDING')
           : [];
         setInvitations(pendingInvs);
@@ -142,7 +142,7 @@ const GroupDetailPage: React.FC = () => {
       alert("Invitation sent");
       setIsInviteModalOpen(false);
       setSearchQuery('');
-      fetchGroupData(); 
+      fetchGroupData();
     } catch (error: any) {
       alert(error.response?.data?.message || "Invitation failed");
     }
@@ -280,8 +280,8 @@ const GroupDetailPage: React.FC = () => {
                 <div key={inv.id} className="member-card" style={{ borderStyle: 'dashed', borderColor: '#333' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#A2D2FF', fontSize: '0.8rem' }}>
-                      {inv.invitedUser?.username 
-                        ? inv.invitedUser.username.toUpperCase() 
+                      {inv.invitedUser?.username
+                        ? inv.invitedUser.username.toUpperCase()
                         : `USER_ID: ${inv.invitedUserId}`}
                     </div>
                     <div style={{ fontSize: '0.6rem', color: '#444' }}>STATUS: PENDING</div>
