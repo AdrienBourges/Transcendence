@@ -84,15 +84,17 @@ export async function login(data: LoginInput) {
 	};
 }
 export async function oauth42Callback(code: string) {
+	const params = new URLSearchParams({
+		grant_type: "authorization_code",
+		client_id: process.env.OAUTH42_UID as string,
+		client_secret: process.env.OAUTH42_SECRET as string,
+		code: code,
+		redirect_uri: process.env.OAUTH42_REDIRECT_URI as string,
+	});
+
 	const tokenResponse = await axios.post(
 		"https://api.intra.42.fr/oauth/token",
-		{
-			grant_type: "authorization_code",
-			client_id: process.env.OAUTH42_UID,
-			client_secret: process.env.OAUTH42_SECRET,
-			code: code,
-			redirect_uri: process.env.OAUTH42_REDIRECT_URI,
-		}
+		params
 	);
 
 	if (!tokenResponse.data.access_token) {
