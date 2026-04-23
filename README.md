@@ -1,409 +1,463 @@
-# Transcendence
+*This project has been created as part of the 42 curriculum by abourges, jinhuang, gholloco, mmedjahe.*
 
-A social web application project developed for **42 students**.
+# ft_transcendence
 
-## Current Status
+## Description
+
+**ft_transcendence** is a full-stack web application designed as a collaborative social platform for 42 students. The goal of the project is to create a secure and modern web application where users can register, manage their profile, find teammates, create project groups, send invitations, chat in real time, and publish project registration posts.
+
+The project was built with a clear separation between frontend, backend, database, and infrastructure layers. It is containerized with Docker and served through NGINX with HTTPS enabled, so the application can be launched with a single command.
+
+### Project goals
+
+- Build a complete web application from scratch.
+- Implement user authentication and secure access control.
+- Provide collaboration-oriented features for team formation.
+- Practice full-stack architecture, database design, real-time communication, and deployment.
+- Deliver a project that is easy to run, review, and extend.
+
+### Key features
+
+- Local authentication with email and password
+- 42 OAuth authentication
+- User profiles with editable public information
+- User search bar and public profile access
+- Friend system
+- Private one-to-one real-time chat with Socket.IO
+- Online presence during chat sessions
+- Group creation and management
+- Group invitations and membership management
+- Project registrations with searchable filters
+- Dockerized stack with NGINX reverse proxy and HTTPS
+
+---
+
+## Team Information
+
+| Member | Role(s) | Responsibilities |
+|---|---|---|
+| **abourges** | Product Owner, Group Lead, Coordination | Defined the global direction of the project, organized the work, clarified technical decisions, coordinated the team, reviewed progress, helped unblock issues across the project, and contributed to documentation / infrastructure / feature follow-up. |
+| **jinhuang** | Frontend Developer | Implemented the frontend application, pages, user flows, forms, UI integration with backend endpoints, and most of the client-side experience. |
+| **gholloco** | Backend Developer, Database | Worked on backend routes, services, authentication, API logic, business rules, and database-related implementation. |
+| **mmedjahe** | Backend Developer, Database | Worked on backend logic, API endpoints, data persistence, database structure, and backend feature implementation. |
+
+
+---
+
+## Instructions
+
+### Run the project
+
+From the repository root:
+
+```bash
+	docker compose up --build
+```
+
+This command will:
+
+- start PostgreSQL
+- build and start the backend
+- build and start the frontend
+- start NGINX
+- expose the application through HTTPS
+
+### Access the application
+
+Open the application in your browser:
+
+```text
+	https://localhost
+```
+
+Because the project uses a local development certificate, your browser may display a security warning the first time. This is expected for a self-signed local certificate.
+
+### Useful checks
+
+Health route:
+
+```bash
+	curl -k https://localhost/api/health
+```
+
+HTTP to HTTPS redirection:
+
+```bash
+	curl -I http://localhost
+```
+
+Check running services:
+
+```bash
+	docker compose ps
+```
+
+View logs:
+
+```bash
+	docker compose logs -f
+```
+
+### Stop the project
+
+In the compose terminal:
+
+```bash
+	Ctrl + C
+```
+
+Or from another terminal:
+
+```bash
+	docker compose down
+```
+
+To also remove volumes and reset the database:
+
+```bash
+	docker compose down -v
+```
+
+---
+
+## Project Management
+
+### Team organization
+
+The team used a practical feature-based workflow:
+
+- requirements and high-level choices were clarified first
+- large tasks were split into smaller subtasks
+- frontend and backend work were separated as much as possible
+- backend API design was documented early to reduce friction with frontend integration
+- regular feedback loops were used to validate features progressively
+- difficult parts were debugged collaboratively when necessary
+
+### Work distribution
+
+The work was mainly divided into:
+
+- **frontend implementation**
+- **backend/API implementation**
+- **database/schema design**
+- **infrastructure and coordination**
+- **documentation and final integration**
+
+### Meetings and follow-up
+
+The team used informal synchronization sessions to:
+
+- decide priorities
+- check blockers
+- verify backend/frontend compatibility
+- review what was finished and what still needed testing
+
+### Tools used for project management
+
+- **GitHub** for repository hosting and pull requests
+- **Git branches** for isolated feature work
+- **GitHub Issues / board / task breakdown**: 
+- **Markdown documentation** inside the repository
+
+### Communication channels
+
+- **Discord**: 
+
+---
+
+## Technical Stack
 
 ### Frontend
 
-- Register page working: `http://localhost:5173/register`
-- Login page working: `http://localhost:5173/login`
-- Logout flow working
-- 42 OAuth login working from the frontend login flow
-- Profile update
-- Avatar update
-- Accesss someone's profile: http://localhost:5173/profile/:userid. (example: http://localhost:5173/profile/1)
-- Friendship feature (Add, Delete and see your own friendlist)
-<<<<<<< HEAD
-=======
-- Frontend chat integration is the next step: backend conversation routes and realtime events are now available
->>>>>>> f6bb48f (update README)
+- **React**
+- **TypeScript**
+- **Vite**
+- **Axios**
+- **React Router**
+- **Zustand**
+- **Socket.IO Client**
 
 ### Backend
 
-- Email/password registration
-- Email/password login
-- 42 OAuth login
-- JWT authentication
-- Get current authenticated user
-- Get public user profile by ID
-- Update current user profile
-- Avatar image upload to filesystem
-- Friendship feature:
-  - add a friend
-  - remove a friend
-  - get the current user's friend list
-- Conversation backend:
-  - create or retrieve a private conversation
-  - get the current user's conversations
-  - get message history for a conversation
-- Realtime chat / presence with Socket.IO:
-  - join a conversation room with JWT + conversationId
-  - send realtime messages
-  - receive `message:new` events
-  - receive `presence:update` events when the other participant connects or disconnects
+- **Node.js**
+- **Express**
+- **TypeScript**
+- **Socket.IO**
+- **Zod** for input validation
+- **bcrypt** for password hashing
+- **jsonwebtoken** for JWT-based authentication
+- **multer** for avatar upload handling
+
+### Database
+
+- **PostgreSQL**
+- **Prisma ORM**
+
+### Infrastructure
+
+- **Docker**
+- **Docker Compose**
+- **NGINX** reverse proxy
+- **HTTPS** with local development certificates
+
+### Why these choices were made
+
+- **React + TypeScript**: good developer experience, clear component model, strong typing, and a modern frontend workflow.
+- **Express + TypeScript**: simple and flexible backend stack, easy to organize into routes/controllers/services, good fit for a student full-stack project.
+- **PostgreSQL**: reliable relational database, well suited for entities and relationships such as users, groups, invitations, messages, and project registrations.
+- **Prisma**: easier schema management, typed database access, cleaner migrations, and better maintainability than raw SQL for this project size.
+- **Socket.IO**: practical real-time communication layer for private chat and presence.
+- **NGINX + Docker**: simple deployment story, single public entry point, clear separation of services, and a clean way to enforce HTTPS.
 
 ---
 
-## Tech Stack
+## Database Schema
 
-- **Frontend:** React + Vite + TypeScript
-- **Backend:** Express + TypeScript
-- **Database:** PostgreSQL
-- **Authentication:** JWT + 42 OAuth
-- **File Storage:** Backend filesystem
-- **Realtime / Chat:** Socket.IO backend implemented
-- **HTTPS / Reverse Proxy:** planned
-- **Full Dockerization:** planned
+### Overview
+
+The database is relational and centered around users, collaboration entities, and messaging.
+
+### Main entities
+
+- **User**
+- **Profile**
+- **Friendship**
+- **Conversation**
+- **ConversationParticipant**
+- **Message**
+- **Group**
+- **GroupMember**
+- **GroupInvitation**
+- **ProjectRegistration**
+
+### Main relationships
+
+- A **User** has one optional **Profile**
+- A **User** can have many **Friendship** links
+- A **User** can participate in many **Conversation** objects through **ConversationParticipant**
+- A **Conversation** contains many **Message** objects
+- A **User** can own many **Group** objects
+- A **Group** has many **GroupMember** entries
+- A **Group** has many **GroupInvitation** entries
+- A **User** can create many **ProjectRegistration** entries
+
+### Key fields and types
+
+#### User
+- `id: Int`
+- `email: String?`
+- `username: String`
+- `passwordHash: String?`
+- `oauth42Id: String?`
+- `authProvider: String`
+- `createdAt: DateTime`
+
+#### Profile
+- `id: Int`
+- `userId: Int`
+- `avatarUrl: String?`
+- `languages: String?`
+- `discord: String?`
+- `pronouns: String?`
+
+#### Group
+- `id: Int`
+- `name: String`
+- `description: String?`
+- `projectName: ProjectName`
+- `deadline: DateTime?`
+- `isBonus: Boolean`
+- `ownerId: Int`
+- `createdAt: DateTime`
+
+#### GroupMember
+- `id: Int`
+- `userId: Int`
+- `groupId: Int`
+- `role: String`
+- `joinedAt: DateTime`
+
+#### GroupInvitation
+- `id: Int`
+- `groupId: Int`
+- `invitedById: Int`
+- `invitedUserId: Int`
+- `status: String`
+- `createdAt: DateTime`
+
+#### ProjectRegistration
+- `id: Int`
+- `userId: Int`
+- `projectName: ProjectName`
+- `deadline: DateTime?`
+- `isBonus: Boolean`
+- `description: String?`
+- `createdAt: DateTime`
+
+#### Conversation / Message
+- `Conversation.id: Int`
+- `Message.id: Int`
+- `Message.convId: Int`
+- `Message.senderId: Int`
+- `Message.content: String`
+- `Message.createdAt: DateTime`
+
+## Features List
+
+| Feature | Description | Team member(s) |
+|---|---|---|
+| User registration | Users can create an account with email, username, and password. | gholloco, mmedjahe |
+| Local login/logout | Users can authenticate with JWT-based login. | gholloco, mmedjahe |
+| 42 OAuth login | Users can sign in with their 42 account. | gholloco, mmedjahe |
+| User profile | Users can access and update public profile data. | jinhuang, gholloco, mmedjahe |
+| Avatar upload | Users can upload an avatar image. | gholloco, mmedjahe |
+| User search | Search bar to find users by username and open their profile. | jinhuang, gholloco, mmedjahe |
+| Friend system | Users can add or remove friends and see their friend list. | gholloco, mmedjahe, jinhuang |
+| Private conversations | Users can open private conversations. | gholloco, mmedjahe, jinhuang |
+| Real-time chat | Messages are exchanged through Socket.IO in real time. | gholloco, mmedjahe, jinhuang |
+| Online presence | Presence is shown while chat sessions are active. | gholloco, mmedjahe, jinhuang |
+| Group creation | Users can create project groups with project, bonus, and deadline data. | gholloco, mmedjahe, jinhuang |
+| Group management | Users can consult group details, members, and owner actions. | gholloco, mmedjahe, jinhuang |
+| Group invitations | Owners can invite users to join groups; users can accept or reject invitations. | gholloco, mmedjahe, jinhuang |
+| Project registrations | Users can publish project registration posts and browse them with filters. | gholloco, mmedjahe, jinhuang |
+| HTTPS / NGINX / Docker | Full stack runs through Docker with NGINX and HTTPS. | abourges |
+| Coordination / documentation | Feature planning, task split, docs, integration follow-up. | abourges |
+
 
 ---
 
-## Prerequisites
+## Modules
 
-Make sure you have installed:
+### Chosen modules
 
-- Node.js
-- npm
-- Docker
-- Docker Compose
+-> • Major (+2) : Use a framework for both the frontend and backend. 
 
----
+-> • Major (+2): Allow users to interact with other users.
 
-## Getting Started
+-> • Major (+2): An organization system
 
-### 1. Clone the repository
+-> • Minor (+1): Implement advanced search functionality with filters, sorting, and  pagination.
 
-```bash
-git clone <repo-url>
-cd Transcendence
-```
+-> • Major (+2): Standard user management and authentication:
 
-### 2. Create the backend environment file
+->•  Minor (+1): A complete notification system for all creation, update, and deletion actions. 
 
-```bash
-cp backend/.env.example backend/.env
-```
+-> • Minor (+1): Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.).
 
-### 3. Start PostgreSQL
+-> • Minor (+1): Use an ORM for the database.
 
-```bash
-docker-compose up -d postgres
-```
+-> • Major (+2): Implement real-time features using WebSockets or similar technology
 
-Check that it is running:
+-> • Minor (+1): Custom-made design system with reusable components, including a proper color palette, typography, and icons (minimum: 10 reusable components). 
 
-```bash
-docker-compose ps
-```
+-> • Minor (+1) : Support for additional browsers. 
 
-### 4. Start the backend
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-Backend runs on: `http://localhost:3000`
-
-### 5. Start the frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend runs on: `http://localhost:5173`
 
 ---
 
-## Frontend Routes
+## Individual Contributions
 
-Currently available:
+### abourges
 
-- **Register:** `http://localhost:5173/register`
-- **Login:** `http://localhost:5173/login`
+- Group leader / PO responsibilities
+- Defined priorities and helped structure the work
+- Coordinated the team and clarified tasks
+- Followed integration between frontend and backend
+- Helped on debugging and cross-feature issues
+- Worked on infrastructure / Docker / NGINX / HTTPS / documentation
 
-For chat, a dedicated conversation page / component still has to be connected to the backend routes and Socket.IO events described below.
+### jinhuang
 
----
+- Implemented the frontend application
+- Built the main pages and user flows
+- Integrated frontend components with backend endpoints
+- Worked on interface behavior for profiles, groups, search, and project registration pages
 
-## 42 OAuth Login
+### gholloco
 
-42 OAuth can now be started directly from the frontend login page.
+- Worked on backend feature implementation
+- Contributed to authentication, API routes, services, and business logic
+- Contributed to database-related backend work
 
-### Frontend flow
+### mmedjahe
 
-- open the frontend login page: `http://localhost:5173/login`
-- click **Login with 42**
-- the frontend redirects to the backend OAuth route
-- after authentication on the 42 side, the user is redirected back through the backend callback flow
+- Worked on backend feature implementation
+- Contributed to database design and persistence logic
+- Worked on backend routes, services, and project feature support
 
----
+### Challenges and how they were overcome
 
-## API Endpoints
+Some of the main challenges of the project included:
 
-### Authentication
+- keeping frontend and backend aligned while the API evolved
+- managing Prisma migrations and schema changes safely
+- implementing real-time chat and presence with a simple, maintainable model
+- dealing with routing and redirection issues in OAuth flows
+- integrating Docker, NGINX, and HTTPS without overcomplicating the stack
 
-#### `POST /api/auth/register`
-Create a new user with:
-- `email`
-- `username`
-- `password`
-
-#### `POST /api/auth/login`
-Authenticate a user with email/password.
-
-Returns:
-- a **JWT**
-- user data
-
-### Users
-
-#### `GET /api/users/me` *(JWT required)*
-Get the current authenticated user.
-
-#### `GET /api/users/:id`
-Get a public user profile by ID.
-
-#### `GET /api/users/me/friends` *(JWT required)*
-Get the current user's friend list.
-
-#### `PATCH /api/users/me` *(JWT required)*
-Update the current user's profile.
-
-Example fields:
-- `avatarUrl`
-- `languages`
-- `discord`
-- `pronouns`
-
-### Friends
-
-#### `POST /api/friends/:id` *(JWT required)*
-Add user `:id` to the current user's friend list.
-
-#### `DELETE /api/friends/:id` *(JWT required)*
-Remove user `:id` from the current user's friend list.
-
-### Conversations *(JWT required)*
-
-#### `POST /api/conversations/private/:id`
-Create or retrieve a private conversation with user `:id`.
-
-Use this first when the frontend wants to open a chat with another user.
-
-#### `GET /api/conversations`
-Get the current user's private conversations.
-
-The response includes the other participant's basic public information.
-
-#### `GET /api/conversations/:id/messages`
-Get the message history of a conversation.
-
-The user must be part of the conversation.
-
-### Realtime Socket.IO chat
-
-Once the frontend has a valid conversation ID, it can connect to Socket.IO for realtime updates.
-
-#### Connection requirements
-
-The socket connection must send:
-
-- the JWT in `auth.token`
-- the conversation ID in `query.conversationId`
-
-The backend accepts the socket only if:
-
-- the JWT is valid
-- the user is part of the conversation
-
-#### Events received from backend
-
-- `message:new` → fired when a new message is saved in the conversation
-- `presence:update` → fired when a participant becomes online or offline in that conversation
-
-#### Event sent by frontend
-
-- `message:send` with payload:
-
-```json
-{
-  "content": "Hello"
-}
-```
-
-#### Frontend implementation notes
-
-Recommended chat flow for the frontend:
-
-1. Call `POST /api/conversations/private/:id` when the user opens a chat with another user.
-2. Store the returned conversation ID.
-3. Call `GET /api/conversations/:id/messages` to load the old messages.
-4. Open the Socket.IO connection only when the conversation page is opened.
-5. Connect with the JWT and the conversation ID.
-6. Listen to `message:new` and append incoming messages to the UI.
-7. Listen to `presence:update` to display online / offline state for the other participant.
-8. Emit `message:send` when the user sends a new message.
-
-### Upload
-
-#### `POST /api/upload/avatar` *(JWT required)*
-Upload an avatar image.
-
-The file is saved in the backend filesystem.
-
-### Health
-
-#### `GET /api/health`
-Check if the server is running.
-
-#### `GET /api/db-health`
-Check database connection.
+These issues were handled through iterative testing, API clarification, small-step debugging, and regular coordination between frontend and backend work.
 
 ---
 
-## API Test Commands
+## Infrastructure and Security Notes
 
-### Register
+- The application is launched with **one command** using Docker Compose.
+- **NGINX** is the only public entry point.
+- The backend is accessed publicly through **HTTPS**.
+- The backend container is **not exposed directly** to the host.
+- PostgreSQL is **not exposed directly** to the host in the final stack.
+- Client requests to `/api` pass through NGINX.
+- Socket.IO traffic is proxied through NGINX.
 
-```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","username":"gwendal","password":"password123"}'
-```
 
-### Login
+## Resources
 
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","password":"password123"}'
-```
+### Technical references
 
-### Get current authenticated user
+- React documentation: https://react.dev/
+- Vite documentation: https://vite.dev/
+- TypeScript documentation: https://www.typescriptlang.org/docs/
+- Express documentation: https://expressjs.com/
+- PostgreSQL documentation: https://www.postgresql.org/docs/
+- Prisma documentation: https://www.prisma.io/docs
+- Socket.IO documentation: https://socket.io/docs/v4/
+- Docker documentation: https://docs.docker.com/
+- Docker Compose documentation: https://docs.docker.com/compose/
+- NGINX documentation: https://nginx.org/en/docs/
+- 42 API documentation: https://api.intra.42.fr/apidoc
+- Zod documentation: https://zod.dev/
 
-Replace `TOKEN` with the JWT returned by login.
+### Tutorials / general references
 
-```bash
-curl http://localhost:3000/api/users/me \
-  -H "Authorization: Bearer TOKEN"
-```
+- MDN Web Docs: https://developer.mozilla.org/
+- web.dev: https://web.dev/
+- PostgreSQL tutorial resources: https://www.postgresqltutorial.com/
+- Prisma guides and examples: https://www.prisma.io/docs/orm/prisma-client
 
-### Get public user profile by ID
+### How AI was used
 
-```bash
-curl http://localhost:3000/api/users/1
-```
+AI tools were used as a support tool during the project, mainly for:
 
-### Get current user's friend list
+- understanding unfamiliar documentation faster
+- comparing technical options and stack choices
+- breaking large features into smaller implementation steps
+- debugging TypeScript, Prisma, Docker, NGINX, and networking issues
+- reviewing API structure and route consistency
+- improving written documentation and README drafting
 
-Replace `TOKEN` with the JWT returned by login.
-
-```bash
-curl http://localhost:3000/api/users/me/friends \
-  -H "Authorization: Bearer TOKEN"
-```
-
-### Add a friend
-
-Replace `TOKEN` with the JWT returned by login.
-
-```bash
-curl -X POST http://localhost:3000/api/friends/2 \
-  -H "Authorization: Bearer TOKEN"
-```
-
-### Remove a friend
-
-Replace `TOKEN` with the JWT returned by login.
-
-```bash
-curl -X DELETE http://localhost:3000/api/friends/2 \
-  -H "Authorization: Bearer TOKEN"
-```
-
-### Update current user's profile
-
-Replace `TOKEN` with the JWT returned by login.
-
-```bash
-curl -X PATCH http://localhost:3000/api/users/me \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer TOKEN" \
-  -d '{"avatarUrl":"https://example.com/avatar.png","languages":"fr,en","discord":"gholloco","pronouns":"he/him"}'
-```
-
-### Create or retrieve a private conversation
-
-Replace `TOKEN` with the JWT returned by login. Replace `USER_ID` with the target user ID.
-
-```bash
-curl -X POST http://localhost:3000/api/conversations/private/USER_ID \
-  -H "Authorization: Bearer TOKEN"
-```
-
-### Get current user's conversations
-
-Replace `TOKEN` with the JWT returned by login.
-
-```bash
-curl http://localhost:3000/api/conversations \
-  -H "Authorization: Bearer TOKEN"
-```
-
-### Get conversation messages
-
-Replace `TOKEN` with the JWT returned by login and `CONVERSATION_ID` with a real conversation ID.
-
-```bash
-curl http://localhost:3000/api/conversations/CONVERSATION_ID/messages \
-  -H "Authorization: Bearer TOKEN"
-```
-
-### Health check
-
-```bash
-curl http://localhost:3000/api/health
-```
-
-### Database health check
-
-```bash
-curl http://localhost:3000/api/db-health
-```
-
-### Upload avatar
-
-Replace `TOKEN` with the JWT returned by login, and replace the file path with a real image path on your machine.
-
-```bash
-curl -X POST http://localhost:3000/api/upload/avatar/ \
-  -H "Authorization: Bearer TOKEN" \
-  -F "avatar=@/home/gwendal/avatar.png"
-```
+AI was **not** used as a substitute for implementation ownership. The final code, architecture decisions, testing, and integration were reviewed and validated by the team.
 
 ---
 
-## Friendship Feature Notes
+## Known Limitations / Possible Improvements
 
-The friendship system is **unilateral**:
-
-- adding a user to your friend list does **not** require acceptance
-- adding a user does **not** automatically add you to their friend list
-- each user manages their own friend list independently
-
----
-
-## Notes
-
-- Frontend and backend currently run locally
-- HTTPS is not set up yet
-- PostgreSQL runs in Docker while the apps run on the host
-- Full Dockerization and nginx reverse proxy are planned
-- Groups and search are next priorities
-- Realtime chat backend is available; the next step is frontend integration of conversation pages and Socket.IO events
+- The local HTTPS certificate is intended for development/demo use.
+- Some polling-based frontend refresh behavior could be optimized.
+- Some feature areas can still be refined in terms of UX polish and error feedback.
+- Production deployment would require stronger environment separation and certificate management.
 
 ---
+
+## Credits
+
+This project was developed by the team listed at the top of this README as part of the **42 curriculum**.
