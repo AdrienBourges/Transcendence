@@ -8,7 +8,7 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 const app = express();
 
 app.use(cors({
-	origin: "https://localhost",
+	origin: "https://localhost:8443",
 	credentials: true,
 }));
 

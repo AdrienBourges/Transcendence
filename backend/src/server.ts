@@ -10,7 +10,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "https://localhost",
+    origin: "https://localhost:8443",
     credentials: true,
   }
 });
