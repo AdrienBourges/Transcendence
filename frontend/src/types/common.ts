@@ -7,8 +7,8 @@ export type InviteStatus = 'pending' | 'accepted' | 'declined';
 export type NotificationType = 'group_invite' | 'friend_request' | 'message';
 
 
-export enum BonusPreference {
-  YES = 'yes',
-  NO = 'no',
-  NONE = 'none'
-}
+//export enum BonusPreference {
+ // YES = 'yes'|
+ // NO = 'no'|
+//  NONE = 'none
+//}

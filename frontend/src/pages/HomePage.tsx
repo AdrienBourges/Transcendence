@@ -12,13 +12,13 @@ const HomePage: React.FC = () => {
   const { user } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
-  const { 
-    hasNotification, 
-    setNotification, 
-    sockets,           
-    joinConversations,  
-    setActiveConv,      
-    disconnectAll 
+  const {
+    hasNotification,
+    setNotification,
+    sockets,
+    joinConversations,
+    setActiveConv,
+    disconnectAll
   } = useChatStore();
 
   // --- UI States ---
@@ -35,12 +35,12 @@ const HomePage: React.FC = () => {
   const [friendsList, setFriendsList] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeChatUser, setActiveChatUser] = useState<any | null>(null);
-  const [unreadInvites, setUnreadInvites] = useState(0); 
+  const [unreadInvites, setUnreadInvites] = useState(0);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const BACKEND_URL = 'http://localhost:3000';
+  const BACKEND_URL = '';
   const BABY_BLUE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23A2D2FF'/%3E%3C/svg%3E";
 
   /**
@@ -63,7 +63,7 @@ const HomePage: React.FC = () => {
       // 1. Retrieve the received invitation
       const receivedRes = await axios.get(`${BACKEND_URL}/api/groups/invitations/received`, config);
       const receivedData = Array.isArray(receivedRes.data) ? receivedRes.data : [];
-      totalNotifications += receivedData.filter((inv: any) => 
+      totalNotifications += receivedData.filter((inv: any) =>
         inv.status === 'PENDING' || inv.status === 'pending'
       ).length;
 
@@ -145,8 +145,8 @@ const HomePage: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setFriendsList(res.data);
-    } catch (err) { 
-      console.error("FETCH_FRIENDS_ERROR", err); 
+    } catch (err) {
+      console.error("FETCH_FRIENDS_ERROR", err);
     }
   }, []);
 
@@ -162,7 +162,7 @@ const HomePage: React.FC = () => {
       });
 
       const cleaned = await Promise.all(res.data.map(async (conv: any) => {
-        const participant = conv.ConvParticipants?.find((p: any) => p.user?.id !== user.id) 
+        const participant = conv.ConvParticipants?.find((p: any) => p.user?.id !== user.id)
                           || conv.ConvParticipants?.[0];
         const otherUser = participant?.user || { username: "Unknown Node", id: 0 };
 
@@ -180,11 +180,11 @@ const HomePage: React.FC = () => {
 
       const sorted = sortConversations(cleaned);
       setConversations(sorted);
-      
+
       const allConvIds = sorted.map((c: any) => c.id);
       if (allConvIds.length > 0) joinConversations(allConvIds);
-    } catch (err) { 
-      console.error("FETCH_CONVERSATIONS_ERROR", err); 
+    } catch (err) {
+      console.error("FETCH_CONVERSATIONS_ERROR", err);
     }
   }, [user?.id, joinConversations]);
 
@@ -211,8 +211,8 @@ const HomePage: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchFriends();
-    } catch (err) { 
-      alert("DELETION_FAILED"); 
+    } catch (err) {
+      alert("DELETION_FAILED");
     }
   };
 
@@ -224,9 +224,9 @@ const HomePage: React.FC = () => {
       if (isSearchOpen && searchQuery.length >= 2) {
         setIsSearching(true);
         try {
-          const token = localStorage.getItem(AUTH_TOKEN_KEY); 
+          const token = localStorage.getItem(AUTH_TOKEN_KEY);
           const res = await axios.get(`${BACKEND_URL}/api/users/search?username=${searchQuery}`, {
-            headers: { Authorization: `Bearer ${token}` } 
+            headers: { Authorization: `Bearer ${token}` }
           });
           setSearchResults(res.data);
         } catch (err) {
@@ -244,7 +244,7 @@ const HomePage: React.FC = () => {
   }, [searchQuery, isSearchOpen]);
 
   /**
-   * Socket listening 
+   * Socket listening
    */
   useEffect(() => {
     if (sockets.size === 0) return;
@@ -262,8 +262,8 @@ const HomePage: React.FC = () => {
       handlers.set(convId, handler);
     });
     return () => {
-      handlers.forEach((handler, convId) => { 
-        sockets.get(convId)?.off('message:new', handler); 
+      handlers.forEach((handler, convId) => {
+        sockets.get(convId)?.off('message:new', handler);
       });
     };
   }, [sockets]);
@@ -316,63 +316,63 @@ const HomePage: React.FC = () => {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
-        
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body { 
-          background: #050505; 
-          color: #ffffff; 
-          font-family: 'Inter', sans-serif; 
+
+        body {
+          background: #050505;
+          color: #ffffff;
+          font-family: 'Inter', sans-serif;
           overflow-x: hidden;
           -webkit-font-smoothing: antialiased;
         }
 
-        .hp-nav { 
-          position: fixed; 
-          top: 0; left: 0; right: 0; 
-          height: 55px; 
-          display: flex; 
-          align-items: center; 
-          justify-content: space-between; 
-          padding: 0 1.5rem; 
-          background: rgba(0,0,0,0.9); 
-          border-bottom: 1px solid #222; 
-          z-index: 1000; 
-          backdrop-filter: blur(10px); 
+        .hp-nav {
+          position: fixed;
+          top: 0; left: 0; right: 0;
+          height: 55px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 1.5rem;
+          background: rgba(0,0,0,0.9);
+          border-bottom: 1px solid #222;
+          z-index: 1000;
+          backdrop-filter: blur(10px);
         }
 
-        .hp-nav-logo { 
-          font-family: 'JetBrains Mono'; 
-          font-weight: 700; 
-          font-size: 0.85rem; 
-          color: #A2D2FF; 
-          letter-spacing: 1px; 
+        .hp-nav-logo {
+          font-family: 'JetBrains Mono';
+          font-weight: 700;
+          font-size: 0.85rem;
+          color: #A2D2FF;
+          letter-spacing: 1px;
         }
 
-        .hp-nav-links { 
-          display: flex; 
-          gap: 0.5rem; 
-          position: absolute; 
-          left: 50%; 
-          transform: translateX(-50%); 
+        .hp-nav-links {
+          display: flex;
+          gap: 0.5rem;
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
         }
 
-        .hp-nav-btn { 
-          background: none; 
-          border: none; 
-          padding: 0.4rem 1rem; 
-          font-size: 0.7rem; 
-          color: #666; 
-          cursor: pointer; 
-          font-family: 'JetBrains Mono'; 
-          transition: 0.2s; 
-          position: relative; 
+        .hp-nav-btn {
+          background: none;
+          border: none;
+          padding: 0.4rem 1rem;
+          font-size: 0.7rem;
+          color: #666;
+          cursor: pointer;
+          font-family: 'JetBrains Mono';
+          transition: 0.2s;
+          position: relative;
           text-transform: uppercase;
         }
 
         .hp-nav-btn:hover { color: #fff; }
         .hp-nav-btn.active { color: #A2D2FF; background: #111; border-radius: 2px; }
-        
+
         .hp-nav-btn.active::after {
           content: '';
           position: absolute;
@@ -384,47 +384,47 @@ const HomePage: React.FC = () => {
           box-shadow: 0 0 10px #A2D2FF;
         }
 
-        .hp-search-container { 
-          display: flex; 
-          align-items: center; 
-          background: #111; 
-          border: 1px solid #333; 
-          border-radius: 4px; 
-          padding: 2px 8px; 
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-          overflow: hidden; 
+        .hp-search-container {
+          display: flex;
+          align-items: center;
+          background: #111;
+          border: 1px solid #333;
+          border-radius: 4px;
+          padding: 2px 8px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
           width: ${isSearchOpen ? '200px' : '34px'};
           cursor: pointer;
         }
 
-        .hp-search-input { 
-          background: transparent; 
-          border: none; 
-          color: #fff; 
-          font-family: 'JetBrains Mono'; 
-          font-size: 0.7rem; 
-          width: 100%; 
-          padding-left: 8px; 
-          outline: none; 
-          opacity: ${isSearchOpen ? 1 : 0}; 
+        .hp-search-input {
+          background: transparent;
+          border: none;
+          color: #fff;
+          font-family: 'JetBrains Mono';
+          font-size: 0.7rem;
+          width: 100%;
+          padding-left: 8px;
+          outline: none;
+          opacity: ${isSearchOpen ? 1 : 0};
           transition: opacity 0.3s;
           pointer-events: ${isSearchOpen ? 'auto' : 'none'};
         }
 
-        .notif-dot { 
-          position: absolute; 
-          top: 6px; right: 6px; 
-          width: 6px; height: 6px; 
-          background: #ff4d4d; 
-          border-radius: 50%; 
-          box-shadow: 0 0 8px #ff4d4d; 
-          z-index: 10; 
+        .notif-dot {
+          position: absolute;
+          top: 6px; right: 6px;
+          width: 6px; height: 6px;
+          background: #ff4d4d;
+          border-radius: 50%;
+          box-shadow: 0 0 8px #ff4d4d;
+          z-index: 10;
         }
 
-        .hp-main { 
-          padding: 100px 1.5rem 2rem; 
-          max-width: 900px; 
-          margin: auto; 
+        .hp-main {
+          padding: 100px 1.5rem 2rem;
+          max-width: 900px;
+          margin: auto;
           animation: fadeIn 0.5s ease-out;
         }
 
@@ -433,170 +433,170 @@ const HomePage: React.FC = () => {
           to { opacity: 1; transform: translateY(0); }
         }
 
-        .hp-stats { 
-          display: grid; 
-          grid-template-columns: repeat(3, 1fr); 
-          gap: 1rem; 
-          margin-bottom: 2rem; 
+        .hp-stats {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1rem;
+          margin-bottom: 2rem;
         }
 
-        .hp-stat-box { 
-          background: #080808; 
-          border: 1px solid #1a1a1a; 
-          padding: 1.2rem; 
-          border-radius: 4px; 
-          text-align: center; 
+        .hp-stat-box {
+          background: #080808;
+          border: 1px solid #1a1a1a;
+          padding: 1.2rem;
+          border-radius: 4px;
+          text-align: center;
           transition: 0.3s;
         }
 
         .hp-stat-box.clickable { cursor: pointer; }
-        .hp-stat-box.clickable:hover { 
-          border-color: #A2D2FF; 
+        .hp-stat-box.clickable:hover {
+          border-color: #A2D2FF;
           background: #0c0c0c;
           transform: translateY(-2px);
         }
 
-        .hp-stat-val { 
-          font-family: 'JetBrains Mono'; 
-          font-size: 1.2rem; 
-          color: #fff; 
+        .hp-stat-val {
+          font-family: 'JetBrains Mono';
+          font-size: 1.2rem;
+          color: #fff;
         }
 
-        .hp-stat-label { 
-          font-size: 0.6rem; 
-          color: #555; 
-          text-transform: uppercase; 
-          margin-top: 6px; 
-          font-weight: 700; 
+        .hp-stat-label {
+          font-size: 0.6rem;
+          color: #555;
+          text-transform: uppercase;
+          margin-top: 6px;
+          font-weight: 700;
           letter-spacing: 1px;
         }
 
         .mail-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        
-        .mail-item { 
-          background: #080808; 
-          border: 1px solid #1a1a1a; 
-          padding: 1rem; 
-          border-radius: 4px; 
-          display: flex; 
-          align-items: center; 
-          gap: 1rem; 
-          cursor: pointer; 
+
+        .mail-item {
+          background: #080808;
+          border: 1px solid #1a1a1a;
+          padding: 1rem;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          cursor: pointer;
           transition: 0.2s;
         }
 
-        .mail-item:hover { 
-          border-color: #A2D2FF; 
+        .mail-item:hover {
+          border-color: #A2D2FF;
           background: #0d0d0d;
         }
 
-        .mail-avatar { 
-          width: 42px; height: 42px; 
-          border-radius: 2px; 
-          border: 1px solid #333; 
-          object-fit: cover; 
+        .mail-avatar {
+          width: 42px; height: 42px;
+          border-radius: 2px;
+          border: 1px solid #333;
+          object-fit: cover;
         }
 
-        .mail-user { 
-          font-family: 'JetBrains Mono'; 
-          font-size: 0.85rem; 
-          color: #fff; 
+        .mail-user {
+          font-family: 'JetBrains Mono';
+          font-size: 0.85rem;
+          color: #fff;
         }
 
-        .mail-preview { 
-          font-size: 0.7rem; 
-          color: #555; 
-          white-space: nowrap; 
-          overflow: hidden; 
-          text-overflow: ellipsis; 
+        .mail-preview {
+          font-size: 0.7rem;
+          color: #555;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
           margin-top: 2px;
         }
 
-        .friends-overlay { 
-          position: fixed; inset: 0; 
-          background: rgba(0,0,0,0.85); 
-          backdrop-filter: blur(8px); 
-          z-index: 2000; 
-          display: flex; align-items: center; justify-content: center; 
+        .friends-overlay {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,0.85);
+          backdrop-filter: blur(8px);
+          z-index: 2000;
+          display: flex; align-items: center; justify-content: center;
         }
 
-        .friends-modal { 
-          background: #0a0a0a; 
-          border: 1px solid #333; 
-          width: 360px; 
-          padding: 1.5rem; 
-          border-radius: 4px; 
+        .friends-modal {
+          background: #0a0a0a;
+          border: 1px solid #333;
+          width: 360px;
+          padding: 1.5rem;
+          border-radius: 4px;
           box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        .friend-item { 
-          display: flex; 
-          align-items: center; 
-          justify-content: space-between; 
-          padding: 12px 10px; 
-          border-bottom: 1px solid #111; 
+        .friend-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 10px;
+          border-bottom: 1px solid #111;
           transition: 0.2s;
         }
-        
+
         .friend-item:hover { background: #0d0d0d; }
 
-        .chat-overlay { 
-          position: fixed; inset: 0; 
-          background: rgba(0,0,0,0.85); 
-          z-index: 2000; 
-          display: flex; align-items: center; justify-content: center; 
+        .chat-overlay {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,0.85);
+          z-index: 2000;
+          display: flex; align-items: center; justify-content: center;
         }
 
-        .chat-window { 
-          background: #0a0a0a; 
-          border: 1px solid #333; 
-          width: 450px; 
-          height: 600px; 
-          border-radius: 4px; 
-          overflow: hidden; 
+        .chat-window {
+          background: #0a0a0a;
+          border: 1px solid #333;
+          width: 450px;
+          height: 600px;
+          border-radius: 4px;
+          overflow: hidden;
           box-shadow: 0 0 40px rgba(0,0,0,0.7);
         }
 
-        .hp-dropdown { 
-          position: absolute; 
-          top: 45px; right: 0; 
-          width: 180px; 
-          background: #0a0a0a; 
-          border: 1px solid #333; 
-          padding: 5px; 
-          border-radius: 4px; 
-          z-index: 1001; 
+        .hp-dropdown {
+          position: absolute;
+          top: 45px; right: 0;
+          width: 180px;
+          background: #0a0a0a;
+          border: 1px solid #333;
+          padding: 5px;
+          border-radius: 4px;
+          z-index: 1001;
           box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
 
-        .hp-dropdown-item { 
-          width: 100%; 
-          padding: 10px; 
-          background: none; 
-          border: none; 
-          color: #eee; 
-          text-align: left; 
-          font-size: 0.7rem; 
-          cursor: pointer; 
-          font-family: 'JetBrains Mono'; 
+        .hp-dropdown-item {
+          width: 100%;
+          padding: 10px;
+          background: none;
+          border: none;
+          color: #eee;
+          text-align: left;
+          font-size: 0.7rem;
+          cursor: pointer;
+          font-family: 'JetBrains Mono';
           transition: 0.2s;
         }
 
         .hp-dropdown-item:hover { color: #A2D2FF; background: #111; }
 
-        .hp-label { 
-          font-family: 'JetBrains Mono'; 
-          font-size: 0.7rem; 
-          color: #A2D2FF; 
-          text-transform: uppercase; 
+        .hp-label {
+          font-family: 'JetBrains Mono';
+          font-size: 0.7rem;
+          color: #A2D2FF;
+          text-transform: uppercase;
           letter-spacing: 1px;
         }
 
         .hp-terminal-output {
-          background: #0a0a0a; 
-          border: 1px solid #1a1a1a; 
-          padding: 1.5rem; 
-          border-radius: 4px; 
+          background: #0a0a0a;
+          border: 1px solid #1a1a1a;
+          padding: 1.5rem;
+          border-radius: 4px;
           border-left: 3px solid #A2D2FF;
           margin-top: 1rem;
         }
@@ -610,7 +610,7 @@ const HomePage: React.FC = () => {
       <div className="hp-root">
         <nav className="hp-nav">
           <div className="hp-nav-logo">42_TRANSCENDENCE</div>
-          
+
           <div className="hp-nav-links">
             <button className={`hp-nav-btn ${activeSection === 'dashboard' ? 'active' : ''}`} onClick={() => handleSwitchSection('dashboard')}>[DASHBOARD]</button>
             <button className={`hp-nav-btn ${activeSection === 'messages' ? 'active' : ''}`} onClick={() => handleSwitchSection('messages')}>
@@ -631,13 +631,13 @@ const HomePage: React.FC = () => {
               <button onClick={() => setIsSearchOpen(!isSearchOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               </button>
-              
+
               <form onSubmit={handleMainSearchSubmit} style={{ flex: 1 }}>
-                <input 
-                  className="hp-search-input" 
-                  placeholder="SEARCH_USER..." 
-                  value={searchQuery} 
-                  onChange={(e) => setSearchQuery(e.target.value)} 
+                <input
+                  className="hp-search-input"
+                  placeholder="SEARCH_USER..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   autoFocus={isSearchOpen}
                 />
               </form>
@@ -645,39 +645,39 @@ const HomePage: React.FC = () => {
               {/* --- search result display --- */}
               {isSearchOpen && (searchQuery.length > 0 || isSearching) && (
                 <div style={{
-                  position: 'absolute', 
-                  top: '48px', 
-                  right: 0, 
-                  width: '250px', 
-                  background: '#0a0a0a', 
-                  border: '1px solid #A2D2FF', 
-                  borderRadius: '4px', 
+                  position: 'absolute',
+                  top: '48px',
+                  right: 0,
+                  width: '250px',
+                  background: '#0a0a0a',
+                  border: '1px solid #A2D2FF',
+                  borderRadius: '4px',
                   zIndex: 9999,
-                  maxHeight: '300px', 
+                  maxHeight: '300px',
                   overflowY: 'auto',
-                  boxShadow: '0 0 15px rgba(162, 210, 255, 0.2)' 
+                  boxShadow: '0 0 15px rgba(162, 210, 255, 0.2)'
                 }}>
                   {isSearching && (
                     <div style={{ padding: '10px', fontSize: '0.6rem', color: '#A2D2FF', fontFamily: 'JetBrains Mono' }}>
                       [SCANNING_NETWORK...]
                     </div>
                   )}
-                  
+
                   {!isSearching && searchResults.length === 0 && searchQuery.length >= 2 && (
                     <div style={{ padding: '10px', fontSize: '0.6rem', color: '#444' }}>NO_NODES_FOUND</div>
                   )}
 
                   {searchResults.map((result: any) => (
-                    <div 
-                      key={result.id} 
-                      className="search-result-item" 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '10px', 
-                        padding: '10px', 
-                        cursor: 'pointer', 
-                        borderBottom: '1px solid #111' 
+                    <div
+                      key={result.id}
+                      className="search-result-item"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #111'
                       }}
                       onClick={() => {
                         window.location.href = `/profile/${result.id}`;
@@ -801,8 +801,8 @@ const HomePage: React.FC = () => {
                     </div>
                     <button className="btn-terminate" style={{ background: 'none', border: '1px solid #300', color: '#511', fontSize: '0.5rem', padding: '2px 5px', cursor: 'pointer' }} onClick={() => handleRemoveFriend(f.id)}>[TERMINATE]</button>
                   </div>
-                )) : ( 
-                  <div style={{ textAlign: 'center', color: '#333', fontSize: '0.7rem', padding: '20px' }}>NO_LINKED_NODES_FOUND</div> 
+                )) : (
+                  <div style={{ textAlign: 'center', color: '#333', fontSize: '0.7rem', padding: '20px' }}>NO_LINKED_NODES_FOUND</div>
                 )}
               </div>
             </div>

@@ -5,7 +5,7 @@ import { AUTH_TOKEN_KEY } from '@/utils/constants';
  * 1. Base API configuration
  * Defines the base URL used for all API requests
  */
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * 2. Create axios instance

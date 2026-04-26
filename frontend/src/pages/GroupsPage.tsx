@@ -23,7 +23,7 @@ interface GroupMembership {
 interface Invitation {
   id: number;
   group: Group;
-  inviterId?: number; 
+  inviterId?: number;
   invitedBy?: { username: string };
 }
 
@@ -42,13 +42,13 @@ const GroupsPage: React.FC = () => {
     deadline: ''
   });
 
-  const BACKEND_URL = 'http://localhost:3000/api';
+  const BACKEND_URL = '';
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
   const fetchMyGroups = async () => {
     try {
-        const res = await axios.get(`${BACKEND_URL}/groups/me?t=${Date.now()}`, config);
+        const res = await axios.get(`${BACKEND_URL}/api/groups/me?t=${Date.now()}`, config);
         setMemberships(res.data);
     } catch (err) {
         console.error("ERR_FETCH_MY_GROUPS", err);
@@ -56,7 +56,7 @@ const GroupsPage: React.FC = () => {
   };
   const fetchReceivedInvitations = async () => {
     try {
-        const res = await axios.get(`${BACKEND_URL}/groups/invitations/received`, config);
+        const res = await axios.get(`${BACKEND_URL}/api/groups/invitations/received`, config);
         //console.log("INVITATION_DEBUG_DATA:", res.data);
         setInvitations(res.data);
     } catch (err) {
@@ -67,7 +67,7 @@ const GroupsPage: React.FC = () => {
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${BACKEND_URL}/groups`, formData, config);
+      await axios.post(`${BACKEND_URL}/api/groups`, formData, config);
       setIsCreateModalOpen(false);
       fetchMyGroups();
     } catch (err) {
@@ -77,7 +77,7 @@ const GroupsPage: React.FC = () => {
 
   const handleAcceptInvite = async (inviteId: number) => {
     try {
-      await axios.post(`${BACKEND_URL}/groups/invitations/${inviteId}/accept`, {}, config);
+      await axios.post(`${BACKEND_URL}/api/groups/invitations/${inviteId}/accept`, {}, config);
       fetchReceivedInvitations();
       fetchMyGroups();
     } catch (err) {

@@ -1,4 +1,4 @@
-import { BonusPreference, InviteStatus } from './common';
+//import type{ BonusPreference, InviteStatus } from './common';
 
 // user basic informations
 export interface UserProfile {

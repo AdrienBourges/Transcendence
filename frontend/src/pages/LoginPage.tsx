@@ -106,8 +106,8 @@ export default function LoginPage() {
     
     // Using URLSearchParams to ensure the URL is encoded correctly
     const params = new URLSearchParams({
-      client_id: "u-s4t2ud-9ac612b679f1a8dccfab14517f2f446d97dd25e3b80380cb97ddbbe64b321423",
-      redirect_uri: "http://localhost:3000/api/auth/callback",
+      client_id: import.meta.env.VITE_OAUTH42_CLIENT_ID as string,
+      redirect_uri: import.meta.env.VITE_OAUTH42_REDIRECT_URI as string,
       response_type: "code",
     });
 

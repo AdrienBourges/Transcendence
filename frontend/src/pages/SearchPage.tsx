@@ -16,7 +16,7 @@ const SearchPage: React.FC = () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token_key');
-        const res = await axios.get(`http://localhost:3000/api/users/search?username=${query}`, {
+        const res = await axios.get(`/api/users/search?username=${query}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setResults(res.data);

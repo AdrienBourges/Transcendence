@@ -5,10 +5,70 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
-    ports:
-      - "5433:5432"
+    environment:
+      POSTGRES_USER: transcendence
+      POSTGRES_PASSWORD: transcendence
+      POSTGRES_DB: transcendence
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transcendence -d transcendence"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: transcendence-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      PORT: 3000
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: transcendence
+      POSTGRES_PASSWORD: transcendence
+      POSTGRES_DB: transcendence
+      DATABASE_URL: postgresql://transcendence:transcendence@postgres:5432/transcendence?schema=public
+      OAUTH42_REDIRECT_URI: https://localhost:8443/api/auth/callback
+      FRONTEND_URL: https://localhost:8443
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "npx prisma generate &&
+             npx prisma migrate deploy &&
+             node --import tsx src/server.ts"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_OAUTH42_CLIENT_ID: u-s4t2ud-4309a07c5714409c573847afaa735deb7d9ac101680f761ee8cd0cb961e9d169
+        VITE_OAUTH42_REDIRECT_URI: https://localhost:8443/api/auth/callback
+        VITE_API_URL: /api
+    container_name: transcendence-frontend
+    restart: unless-stopped
+    command: npm run preview -- --host 0.0.0.0 --port 4173
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: transcendence-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
 
 volumes:
   postgres_data:
+  backend_uploads:

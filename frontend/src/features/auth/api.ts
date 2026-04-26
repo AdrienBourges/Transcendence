@@ -1,11 +1,11 @@
 // src/features/auth/api.ts
 import axiosInstance from '@/api/axiosInstance';
-import type { 
-  LoginInput, 
-  SignupInput, 
-  AuthResponse, 
+import type {
+  LoginInput,
+  SignupInput,
+  AuthResponse,
   User,
-  SignupResponse 
+  SignupResponse
 } from '@/types/auth';
 
 /**
@@ -14,11 +14,11 @@ import type {
  */
 export const authApi = {
   // 1. Standard email/password login
-  login: (data: LoginInput) => 
+  login: (data: LoginInput) =>
     axiosInstance.post<AuthResponse>('/auth/login', data),
 
   // 2. Standard user registration
-  register: (data: SignupInput) => 
+  register: (data: SignupInput) =>
     axiosInstance.post<SignupResponse>('/auth/register', data),
 
   /**
@@ -27,7 +27,7 @@ export const authApi = {
    * This function does not return anything; it changes the page URL.
    */
   login42: () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const apiUrl = import.meta.env.VITE_API_URL || '/api';
     window.location.href = `${apiUrl}/auth/42`;
   },
 
@@ -36,14 +36,14 @@ export const authApi = {
    * Triggered in LoginPage's useEffect when returning from 42.
    * Corresponds to backend: POST /auth/42/callback
    */
-  callback42: (code: string) => 
+  callback42: (code: string) =>
     axiosInstance.post<AuthResponse>('/auth/42/callback', { code }),
 
   // 5. Fetch the currently authenticated user profile
-  getMe: () => 
+  getMe: () =>
     axiosInstance.get<User>('/users/me'),
 
   // 6. Terminate the user session
-  logout: () => 
+  logout: () =>
     axiosInstance.post('/auth/logout'),
 };

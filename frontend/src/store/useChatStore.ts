@@ -34,7 +34,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (newSockets.has(convId)) return; // Prevent duplicate connections
 
       changed = true;
-      const socket = io("http://localhost:3000", {
+      const socket = io({
         auth: { token },
         query: { conversationId: convId.toString() },
         transports: ['websocket'],

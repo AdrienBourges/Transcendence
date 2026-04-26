@@ -33,9 +33,9 @@ export async function uploadAvatar(req: Request, res: Response) { // 2. Change t
         // 6. Return success response
         return res.status(201).json({
             message: "Avatar updated and saved to database",
-            avatarUrl: `http://localhost:3000${filePath}`,
+            avatarUrl: filePath,
         });
-        
+
     } catch (error) {
         console.error("Database Update Error:", error);
         throw new ApiError(500, "Failed to link avatar to user profile");

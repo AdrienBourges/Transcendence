@@ -10,7 +10,7 @@ const ProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: me, checkAuth } = useAuthStore();
-  
+
   const { joinConversations, setActiveConv } = useChatStore();
 
   // --- Profile States ---
@@ -31,7 +31,7 @@ const ProfilePage = () => {
   const [activeChatUser, setActiveChatUser] = useState<{ id: number, username: string } | null>(null);
 
   const isOwnProfile = !id || Number(id) === me?.id;
-  const BACKEND_URL = 'http://localhost:3000';
+  const BACKEND_URL = '';
   const BABY_BLUE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23A2D2FF'/%3E%3C/svg%3E";
 
   /**
@@ -57,7 +57,7 @@ const ProfilePage = () => {
           });
           setIsFriend(friendsRes.data.some((f: any) => f.id === Number(id)));
         }
-        
+
         setTargetUser(userData);
         setDiscord(userData?.profile?.discord || '');
         setPronouns(userData?.profile?.pronouns || '');
@@ -78,9 +78,9 @@ const ProfilePage = () => {
     if (isOwnProfile) return;
     try {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      
-      const convRes = await axios.post(`${BACKEND_URL}/api/conversations/private/${id}`, 
-        {}, 
+
+      const convRes = await axios.post(`${BACKEND_URL}/api/conversations/private/${id}`,
+        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const curId = Number(convRes.data.id);
@@ -91,9 +91,9 @@ const ProfilePage = () => {
       setActiveChatUser({ id: Number(id), username: targetUser?.username });
       setActiveConv(curId);
       setChatOpen(true);
-    } catch (err: any) { 
+    } catch (err: any) {
       console.error("CHAT_INIT_ERR", err);
-      alert(`CHAT_INIT_FAILED: ${err.response?.status || 'OFFLINE'}`); 
+      alert(`CHAT_INIT_FAILED: ${err.response?.status || 'OFFLINE'}`);
     }
   };
 
@@ -110,7 +110,7 @@ const ProfilePage = () => {
       await axios.patch(`${BACKEND_URL}/api/users/me`, { discord, pronouns, languages }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      await checkAuth(); 
+      await checkAuth();
       setIsEditing(false);
     } catch (err) { alert('UPDATE_FAILED'); }
   };
@@ -146,8 +146,8 @@ const ProfilePage = () => {
     </div>
   );
 
-  const avatarSrc = targetUser?.profile?.avatarUrl 
-    ? `${BACKEND_URL}${targetUser.profile.avatarUrl}?t=${Date.now()}` 
+  const avatarSrc = targetUser?.profile?.avatarUrl
+    ? `${BACKEND_URL}${targetUser.profile.avatarUrl}?t=${Date.now()}`
     : BABY_BLUE_SVG;
 
   return (
@@ -174,22 +174,22 @@ const ProfilePage = () => {
             <img src={avatarSrc} style={{ width: '100px', height: '100px', borderRadius: '4px', border: '1px solid #333', objectFit: 'cover' }} alt="Avatar" />
             <div>
               <div className="hp-label">{isOwnProfile ? "OWNER_ID" : "REMOTE_ENTITY"}</div>
-              
+
               {/* Display username */}
               <h2 style={{ fontFamily: 'JetBrains Mono', fontSize: '1.8rem', margin: '5px 0' }}>
                 {targetUser?.username}
               </h2>
 
               {/* Display user ID (visible to everyone) */}
-              <div style={{ 
-                fontFamily: 'JetBrains Mono', 
-                fontSize: '0.8rem', 
-                color: '#666', 
+              <div style={{
+                fontFamily: 'JetBrains Mono',
+                fontSize: '0.8rem',
+                color: '#666',
                 marginTop: '-5px',
-                marginBottom: '10px' 
+                marginBottom: '10px'
               }}>
                 <span style={{ color: '#A2D2FF' }}>UID_</span>
-                {targetUser?.id?.toString().padStart(4, '0')} 
+                {targetUser?.id?.toString().padStart(4, '0')}
               </div>
 
               {!isOwnProfile && (
