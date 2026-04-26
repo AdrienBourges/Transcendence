@@ -67,7 +67,7 @@ This command will:
 Open the application in your browser:
 
 ```text
-	https://localhost
+	https://localhost:8443
 ```
 
 Because the project uses a local development certificate, your browser may display a security warning the first time. This is expected for a self-signed local certificate.
@@ -452,9 +452,7 @@ AI was **not** used as a substitute for implementation ownership. The final code
 ## Known Limitations / Possible Improvements
 
 - The local HTTPS certificate is intended for development/demo use.
-- Some polling-based frontend refresh behavior could be optimized.
-- Some feature areas can still be refined in terms of UX polish and error feedback.
-- Production deployment would require stronger environment separation and certificate management.
+- Some features could be added (group chat, clusters status ...)
 
 ---
 
