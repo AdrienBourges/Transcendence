@@ -3,17 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AUTH_TOKEN_KEY } from '@/utils/constants';
 
+// --- Interfaces ---
 interface Group {
   id: number;
   name: string;
   projectName: string;
   description?: string;
   isBonus: boolean;
-  deadline?: string;
+  deadline?: string; // Date stored as ISO string from backend
   ownerId: number;
 }
 
-// Backend returns { role, joinedAt, group: Group }
 interface GroupMembership {
   role: string;
   joinedAt: string;
@@ -34,18 +34,20 @@ const GroupsPage: React.FC = () => {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  // Form state including the new deadline field
   const [formData, setFormData] = useState({
     name: '',
     projectName: 'MINISHELL',
     description: '',
     isBonus: false,
-    deadline: ''
+    deadline: '' // Controlled input for type="date"
   });
 
-  const BACKEND_URL = '';
+  const BACKEND_URL = ''; 
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
+  // Fetch groups where the user is a member or owner
   const fetchMyGroups = async () => {
     try {
         const res = await axios.get(`${BACKEND_URL}/api/groups/me?t=${Date.now()}`, config);
@@ -54,24 +56,29 @@ const GroupsPage: React.FC = () => {
         console.error("ERR_FETCH_MY_GROUPS", err);
     }
   };
+
+  // Fetch pending invitations for the user
   const fetchReceivedInvitations = async () => {
     try {
         const res = await axios.get(`${BACKEND_URL}/api/groups/invitations/received`, config);
-        //console.log("INVITATION_DEBUG_DATA:", res.data);
         setInvitations(res.data);
     } catch (err) {
         console.error("ERR_FETCH_INVITES", err);
     }
   };
 
+  // Logic to handle group creation
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Sends formData (including deadline) to the backend API
       await axios.post(`${BACKEND_URL}/api/groups`, formData, config);
       setIsCreateModalOpen(false);
+      // Reset form to default values
+      setFormData({ name: '', projectName: 'MINISHELL', description: '', isBonus: false, deadline: '' });
       fetchMyGroups();
     } catch (err) {
-      alert("CREATE_FAILED");
+      alert("CREATE_FAILED: Check backend connectivity or validation");
     }
   };
 
@@ -99,25 +106,58 @@ const GroupsPage: React.FC = () => {
         .nav-item.active { color: #A2D2FF; }
         .nav-item.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: #A2D2FF; }
         .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .group-card { background: #0a0a0a; border: 1px solid #1a1a1a; padding: 20px; border-radius: 4px; transition: 0.3s; }
+        
+        .group-card { 
+          background: #0a0a0a; 
+          border: 1px solid #1a1a1a; 
+          padding: 20px; 
+          border-radius: 4px; 
+          transition: 0.3s; 
+          display: flex; 
+          flex-direction: column; 
+          min-height: 220px;
+        }
         .group-card:hover { border-color: #A2D2FF; box-shadow: 0 0 15px rgba(162, 210, 255, 0.05); }
+        
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
         .project-label { font-size: 0.6rem; color: #A2D2FF; border: 1px solid #A2D2FF; padding: 2px 6px; }
         .role-badge { font-size: 0.5rem; padding: 2px 6px; border-radius: 2px; }
         .role-owner { color: #ffd700; border: 1px solid #ffd700; }
         .role-member { color: #888; border: 1px solid #444; }
-        .invite-item { display: flex; justify-content: space-between; align-items: center; background: #0f0f0f; border: 1px solid #222; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
+        
         .btn-action { background: #A2D2FF; color: #000; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; font-size: 0.7rem; font-family: inherit; }
         .btn-secondary { background: none; border: 1px solid #444; color: #fff; padding: 8px 16px; cursor: pointer; font-size: 0.7rem; font-family: inherit; }
         .btn-secondary:hover { border-color: #A2D2FF; color: #A2D2FF; }
+        
+        /* Modal styling with scroll support for long forms */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal-body { background: #050505; border: 1px solid #333; width: 450px; padding: 30px; box-shadow: 0 0 40px rgba(0,0,0,1); }
-        .input-cyber { width: 100%; background: #000; border: 1px solid #222; color: #fff; padding: 10px; margin-bottom: 15px; font-family: inherit; font-size: 0.8rem; box-sizing: border-box; }
+        .modal-body { 
+            background: #050505; 
+            border: 1px solid #333; 
+            width: 450px; 
+            max-width: 95vw; 
+            max-height: 90vh; 
+            overflow-y: auto; 
+            padding: 30px; 
+            box-shadow: 0 0 40px rgba(0,0,0,1); 
+        }
+        .input-cyber { 
+            width: 100%; 
+            background: #000; 
+            border: 1px solid #222; 
+            color: #fff; 
+            padding: 10px; 
+            margin-bottom: 15px; 
+            font-family: inherit; 
+            font-size: 0.8rem; 
+            box-sizing: border-box; 
+            color-scheme: dark; /* Ensures date picker icons are visible in dark mode */
+        }
         .input-cyber:focus { border-color: #A2D2FF; outline: none; }
       `}</style>
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifySelf: 'space-between', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+      {/* Page Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', letterSpacing: '-1px' }}>CELL_NETWORKS</h1>
           <p style={{ color: '#444', fontSize: '0.7rem' }}>PROJECT_TEAM_MANAGEMENT_INTERFACE</p>
@@ -125,7 +165,7 @@ const GroupsPage: React.FC = () => {
         <button className="btn-action" onClick={() => setIsCreateModalOpen(true)}>+ INITIALIZE_GROUP</button>
       </div>
 
-      {/* Nav Tabs */}
+      {/* Navigation Tabs */}
       <div className="groups-nav">
         <div className={`nav-item ${activeTab === 'my_groups' ? 'active' : ''}`} onClick={() => setActiveTab('my_groups')}>
           [MY_CELLS]
@@ -135,7 +175,7 @@ const GroupsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Display List of Groups */}
       <div className="content-area">
         {activeTab === 'my_groups' && (
           <div className="group-grid">
@@ -151,7 +191,13 @@ const GroupsPage: React.FC = () => {
                   </div>
                 </div>
                 <h3 style={{ fontSize: '1rem', marginBottom: '10px' }}>{m.group.name}</h3>
-                <p style={{ fontSize: '0.7rem', color: '#666', height: '40px', overflow: 'hidden', lineHeight: '1.4' }}>
+                
+                {/* Visualizing the Deadline on the Card */}
+                <div style={{ fontSize: '0.6rem', color: '#A2D2FF', marginBottom: '10px', fontWeight: 'bold' }}>
+                  DEADLINE: {m.group.deadline ? new Date(m.group.deadline).toLocaleDateString() : 'NOT_SET'}
+                </div>
+
+                <p style={{ fontSize: '0.7rem', color: '#666', flexGrow: 1, overflow: 'hidden', lineHeight: '1.4' }}>
                   {m.group.description || "NO_MISSION_DESCRIPTION_PROVIDED"}
                 </p>
                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -166,10 +212,11 @@ const GroupsPage: React.FC = () => {
           </div>
         )}
 
+        {/* Invitations Section */}
         {activeTab === 'invitations' && (
           <div className="invitation-list">
             {invitations.length > 0 ? invitations.map((inv, idx) => (
-              <div key={`inv-${inv.id || idx}`} className="invite-item">
+              <div key={`inv-${inv.id || idx}`} className="invite-item" style={{ background: '#0f0f0f', border: '1px solid #222', padding: '15px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ paddingLeft: '20px' }}>
                   <div style={{ fontSize: '0.8rem' }}>
                     <span style={{ color: '#A2D2FF' }}>
@@ -193,17 +240,20 @@ const GroupsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Create Group Modal */}
+      {/* --- CREATE NEW GROUP MODAL --- */}
       {isCreateModalOpen && (
         <div className="modal-overlay" onClick={() => setIsCreateModalOpen(false)}>
           <div className="modal-body" onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: '1.2rem', marginBottom: '20px', color: '#A2D2FF' }}>_CREATE_NEW_CELL</h2>
             <form onSubmit={handleCreateGroup}>
+              
               <label style={{ fontSize: '0.6rem', color: '#444' }}>CELL_NAME</label>
               <input
                 className="input-cyber"
                 required
                 autoFocus
+                placeholder="Enter group name..."
+                value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
               />
 
@@ -221,18 +271,33 @@ const GroupsPage: React.FC = () => {
                 <option value="FT_TRANSCENDENCE">FT_TRANSCENDENCE</option>
               </select>
 
+              {/* NEW FIELD: MISSION DEADLINE */}
+              <label style={{ fontSize: '0.6rem', color: '#A2D2FF', fontWeight: 'bold' }}>MISSION_DEADLINE</label>
+              <input
+                type="date"
+                className="input-cyber"
+                required
+                value={formData.deadline}
+                onChange={e => setFormData({ ...formData, deadline: e.target.value })}
+              />
+
               <label style={{ fontSize: '0.6rem', color: '#444' }}>MISSION_DESCRIPTION</label>
               <textarea
-                className="input-cyber" rows={3}
+                className="input-cyber" 
+                rows={3}
+                placeholder="Briefly describe group goals..."
+                value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
               />
 
               <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center' }}>
                 <input
-                  type="checkbox" id="bonus"
+                  type="checkbox" 
+                  id="bonus"
+                  checked={formData.isBonus}
                   onChange={e => setFormData({ ...formData, isBonus: e.target.checked })}
                 />
-                <label htmlFor="bonus" style={{ fontSize: '0.7rem', marginLeft: '10px', color: '#888' }}>
+                <label htmlFor="bonus" style={{ fontSize: '0.7rem', marginLeft: '10px', color: '#888', cursor: 'pointer' }}>
                   BONUS_MISSION_ENABLED
                 </label>
               </div>
